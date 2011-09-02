@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Upload</title>
+    <script type="text/javascript" src="js/jquery-1.4.3.min.js"></script>
+    <script type="text/javascript" src="js/jquery.iframe-post-form.min.js"></script>
+    <script type="text/javascript" src="js/jquery.progressbar.min.js"></script>
+    <script type="text/javascript">
+      $( document ).ready( function() {
+        $( '#progress' ).hide();
+
+        $( '#form' ).iframePostForm( {
+          post: function() {
+            $( '#form' ).hide();
+            $( '#progress' ).show();
+            $( '#bar' ).progressBar();
+          },
+          complete: function( response ) {
+            var id = response;
+            if( id.substr( 0 , 5 ) == '<pre>' ){
+              id = id.substr( 5 );
+            }
+            id = parseInt( id );
+
+            var timer;
+
+            var check = function() {
+              $.get( './dispatch/admin/getProgress' , { id : id } , function( data ) {
+                prog = $.parseJSON( data );
+
+                if( prog.step == 'COMPLETED' || prog.step == 'FAILED' ) {
+                  clearInterval( timer );
+                  
+                  if ( prog.step == 'FAILED' ) {
+                    alert( prog.error );
+                  }
+                  
+                  location.href = './';
+                }
+
+                $( '#desc' ).html( prog.step );
+                if( prog.step == 'CREATING_THUMBNAIL' ) {
+                  $( '#bar' ).progressBar( prog.createdThumbnail , {
+                    max: prog.totalThumbnail,
+                    textFormat: 'fraction'
+                  } );
+                }
+              } );
+            };
+
+            timer = setInterval( check , 2000 );
+          }
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <h1>Upload</h1>
+    <form id="form" method="post" action="dispatch/admin/upload" enctype="multipart/form-data">
+      <p>
+        Name:<br />
+        <input type="text" name="name"/>
+      </p>
+      <p>
+        File:<br />
+        <input type="file" name="file"/>
+      </p>
+      <p>
+        Display Width:<br />
+        <input type="text" name="actualWidth" value="-1"/>
+      </p>
+      <input id="submit" type="submit" />
+    </form>
+    <div id="progress">
+      <span id="bar">0%</span><br />
+      <span id="desc">Uploading</span>
+    </div>
+    <hr />
+    <h1>Dotbook as Image</h1>
+    <form method="post" action="dispatch/admin/uploadAsImage" enctype="multipart/form-data">
+      <p>
+        Name:<br />
+        <input type="text" name="name"/>
+      </p>
+      <p>
+        File:<br />
+        <input type="file" name="file"/>
+      </p>
+      <p>
+        Display Width:<br />
+        <input type="text" name="actualWidth" value="-1"/>
+      </p>
+      <input id="submit" type="submit" />
+    </form>
+  </body>
+</html>

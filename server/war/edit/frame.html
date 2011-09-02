@@ -1,0 +1,33 @@
+<script>
+    $(document).ready(function() {
+        $("#target").draggable();
+        $("#target").resizable();
+    });
+</script>
+
+ここにコマ割り編集用の画面が出来ます。
+<ul>
+	<li>入力に必要な情報
+	<li>原点x
+	<li>原点y
+	<li>幅、高さ
+	<li>順番、ページ番号 以上
+</ul>
+
+<div id="controller">
+	<input type="button" onclick="page.prev(); draw();" value="< prev">
+	<input type="button" onclick="page.next(); draw();" value="next >">
+	<input type="button" onclick="clear_page(); draw();" value="clear">
+	<input type="button"
+		onclick="addFrame({x:10, y:10, height:100, width:100}); "
+		value="フレームを追加してください。">
+</div>
+
+<div id="canvasesdiv">
+	<div id="target"
+		style="background-color: yellow; opacity: 0.5; width: 300px;">Drag
+		me</div>
+	<canvas id="frame" width="545" height="800"
+		style="border-style:solid; border-width:1px; margin:10px; z-index:1">
+	This text is displayed if your browser does not support HTML5 Canvas. </canvas>
+</div>

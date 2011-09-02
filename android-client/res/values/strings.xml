@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="network_unavailable">ネットワークにアクセスができません。ネットワークが繋がる環境で再度アクセスしてください。</string>
+    <string name="unexpected_error">アプリケーションが予期せぬエラーのため終了します</string>
+    <string name="no_sdcard_error">SDカードエラー</string>
+    <string name="trouble_with_file_error2">ファイルに一部に不具合がありました。管理者にお問い合わせ下さい。</string>
+    <string name="trouble_with_file_error">ファイルの一部に不具合がありました。管理者にお問い合わせ下さい。</string>
+    <string name="no_space_error">SDカードの容量が不足しています。</string>
+    <string name="download_abort_error">ネットワークの接続が切れました</string>
+    <string name="fatal_error">管理者にお問い合わせ下さい。</string>
+    <string name="download_limit_expired">有効期限切れ</string>
+    <string name="cannot_download_in_parallel">既にダウンロードしています。</string>
+    <string name="confirm_finish">ビューアを終了いたしますか？</string>
+    <string name="message_network_error">ダウンロード中にネットワークエラーが発生しました。\nダウンロードを再開してもよろしいですか?</string>
+    <string name="network_error_notification_title">docnext</string>
+    <string name="network_error_notification_text">ダウンロード中にネットワークエラーが発生しました。</string>
+    <string name="yes">はい</string>
+    <string name="no">いいえ</string>
+    <string name="ok">OK</string>
+
+    <string name="notification_progress">コンテンツをダウンロード中です</string>
+
+    <string name="confirm_restore">最後にみていたページに戻りますか?</string>
+
+    <string name="add_bookmark">ブックマークの追加</string>
+    <string name="empty_bookmark">現在、ブックマークされておりません。</string>
+
+    <string name="empty_toc">目次情報がありません。</string>
+
+    <string name="home">戻る</string>
+    <string name="image">画像</string>
+    <string name="text">テキスト表示</string>
+    <string name="toc">目次</string>
+    <string name="thumbnail">サムネイル</string>
+    <string name="bookmark">ブックマーク</string>
+    <string name="bookmark_list">ブックマーク一覧</string>
+    <string name="setting">設定</string>
+    <string name="search">検索</string>
+
+    <string name="message_no_image_view">イメージ表示に対応していないドキュメントです</string>
+    <string name="message_image_view_not_ready">イメージ用のデータをダウンロード中です</string>
+    <string name="message_no_text_view">テキスト表示に対応していないドキュメントです</string>
+    <string name="message_text_view_not_ready">テキスト用のデータをダウンロード中です</string>
+    <string name="message_no_thumbnail_view">サムネイル表示に対応していないドキュメントです</string>
+    <string name="message_thumbnail_view_not_ready">サムネイル用のデータをダウンロード中です</string>
+    <string name="message_search_not_ready">検索用のデータをダウンロード中です</string>
+
+    <string name="search_label">docnext</string>
+
+    <string name="menu_contents">目次</string>
+    <string name="menu_setting">設定</string>
+
+    <string name="toc_label">目次</string>
+
+    <string name="setting_label">Setting</string>
+    <string name="setting_layoutlock">スクリーン固定</string>
+    <string name="setting_use_system_pref">明るさをシステム設定と同期する</string>
+    <string name="setting_automatic_brightness">明るさを自動調整</string>
+    <string name="setting_brightness">明るさ</string>
+    <string name="setting_reset">初期化</string>
+    <string name="setting_reset_message">初期化しても良いですか？</string>
+
+    <string name="setting_update">　更新　</string>
+
+    <string name="text_view_loading">読み込み中</string>
+</resources>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<services-config>
+    <services>
+        <default-channels>
+            <channel ref="my-amf" />
+        </default-channels>
+    </services>
+
+    <channels>
+        <channel-definition id="my-amf"
+            class="mx.messaging.channels.AMFChannel">
+            <endpoint
+                url="http://{server.name}:{server.port}/{context.root}/messagebroker/amf"
+                class="flex.messaging.endpoints.AMFEndpoint" />
+        </channel-definition>
+        <channel-definition id="my-longpolling-amf"
+            class="mx.messaging.channels.AMFChannel">
+            <endpoint
+                url="http://{server.name}:{server.port}/{context.root}/messagebroker/amflongpolling"
+                class="flex.messaging.endpoints.AMFEndpoint" />
+            <properties>
+                <polling-enabled>true</polling-enabled>
+                <polling-interval-millis>5</polling-interval-millis>
+                <wait-interval-millis>60000</wait-interval-millis>
+                <client-wait-interval-millis>
+                    1
+                </client-wait-interval-millis>
+                <max-waiting-poll-requests>
+                    500
+                </max-waiting-poll-requests>
+            </properties>
+        </channel-definition>
+    </channels>
+</services-config>

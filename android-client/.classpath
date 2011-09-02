@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="gen"/>
+	<classpathentry kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
+	<classpathentry kind="lib" path="libs/commons-io-2.0.1.jar"/>
+	<classpathentry kind="lib" path="libs/jsonic-1.2.5.jar"/>
+	<classpathentry kind="lib" path="libs/guava-r09.jar"/>
+	<classpathentry kind="lib" path="libs/lucene-analyzers-3.1.0.jar"/>
+	<classpathentry kind="lib" path="libs/lucene-core-3.1.0.jar"/>
+	<classpathentry kind="lib" path="libs/lucene-highlighter-3.1.0.jar"/>
+	<classpathentry kind="lib" path="libs/httpclient-android-helper-0.0.1-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="libs/commons-codec-1.5.jar"/>
+	<classpathentry kind="lib" path="libs/commons-compress-1.1.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

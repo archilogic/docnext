@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="fill_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" >
+    <LinearLayout android:id="@+id/addButton" android:layout_width="fill_parent" android:layout_height="wrap_content" android:gravity="center"
+        android:padding="10dp">
+        <ImageView android:layout_width="wrap_content" android:layout_height="wrap_content" android:src="@drawable/button_add" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/add_bookmark"
+            android:textSize="18dp" />
+    </LinearLayout>
+    <ImageView android:layout_width="fill_parent" android:layout_height="wrap_content" android:src="@android:drawable/divider_horizontal_dark"
+        android:scaleType="fitXY" />
+    <ListView android:id="@+id/listView" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+    <TextView android:id="@+id/listEmptyView" android:layout_width="fill_parent" android:layout_height="fill_parent" android:gravity="center"
+        android:text="@string/empty_bookmark" android:textSize="18dp" />
+</LinearLayout>

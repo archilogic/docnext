@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView android:id="@+id/pageTextView" android:layout_width="fill_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:gravity="center" android:textSize="36dp" android:text="123 / 456" />
+    <jp.archilogic.docnext.android.coreview.thumbnail.CoverFlow android:id="@+id/coverFlow"
+        android:layout_width="fill_parent" android:layout_height="0dp" android:layout_weight="3" />
+    <LinearLayout android:layout_width="fill_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical"
+        android:padding="24dp">
+        <SeekBar android:id="@+id/seekBar" android:layout_width="fill_parent" android:layout_height="wrap_content" android:progressDrawable="@drawable/simple_seekbar_progress" />
+    </LinearLayout>
+</merge>

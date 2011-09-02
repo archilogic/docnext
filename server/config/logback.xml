@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>docnext:[%level %date %logger{16} %method] %message%n</Pattern>
+        </layout>
+        <Target>System.out</Target>
+    </appender>
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>
+            ${catalina.base}/logs/docman.log
+        </file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>
+                ${catalina.base}/logs/docman.%d{yyyy-MM-dd}.log.gz
+            </FileNamePattern>
+        </rollingPolicy>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>[%date %logger{16} %method %level]%n%message%n</Pattern>
+        </layout>
+    </appender>
+    
+    <root>
+        <level value="INFO" />
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </root>
+</configuration>

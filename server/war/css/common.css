@@ -1,0 +1,43 @@
+table {
+	border-collapse: collapse;
+	border: 1px solid #D7D7D7;
+}
+
+table td,
+table th {
+	border: 1px solid #DDD;
+}
+
+#site_contain {
+	width:650px;
+	margin: 30px auto;
+	padding: 30px;
+	border: 1px solid;
+	border-radius: 20px;
+}
+
+#navigation ul {
+	list-style: none;
+	padding: 10px;
+	margin: 10px;
+}
+
+#navigation li {
+	float: left;
+	margin: 0 0.5em;
+}
+
+#navigation li a {
+	color: blue;
+	background: white;
+	text-decoration: underline;
+}
+
+#navigation li a:hover {
+	color: white;
+	background: gray;
+}
+
+#content {
+	margin: 30px 30px;
+}

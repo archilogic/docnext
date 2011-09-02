@@ -1,0 +1,29 @@
+<h3>Single Page Infoとは</h3>
+<p>
+見開きで表示される場合、一画面に２ページ表示されることがあります。
+Single Page Infoで指定したページは必ず単一ページで表示されます。
+例として、表紙などがあります。
+</p>
+
+<h3>使い方</h3>
+<h4>追加する</h4>
+<p>
+Page Numberを入力した後、Addボタンをクリックします。
+</p>
+<h4>削除する</h4>
+<p>
+対象のページの左にあるチェックボックスにチェックを付けた後に
+removeボタンを押します。
+</p>
+
+<p>
+<input type="button" value="Save" onclick='save();'>
+<label for="targetpage">Page Number</label>
+<input type='text' value='0' id='targetPage' size="3">
+<input type='button' value='Add' onclick='addRow();'>
+<input type="button" value="Remove" onclick='removeRow();'>
+</p>
+
+<h3>Single Page Info List</h3>
+<ul id="spi">
+</ul>

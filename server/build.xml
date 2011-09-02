@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<project default="production">
+    <property name="output" value="build" />
+    <property name="classes" value="${output}/WEB-INF/classes" />
+
+	<target name="production">
+        <delete dir="${output}" />
+
+        <copy todir="${output}">
+            <fileset dir="war" />
+        </copy>
+
+        <mkdir dir="${classes}" />
+
+        <copy file="config/config.tomcat6.properties" tofile="${classes}/config.tomcat6.properties" />
+        <copy todir="${classes}">
+            <fileset dir="config" includes="*.xml" />
+        </copy>
+
+        <javac srcdir="src" destdir="${classes}" encoding="UTF-8" debug="true">
+            <classpath>
+                <fileset dir="${output}/WEB-INF/lib" includes="*.jar" />
+            </classpath>
+        </javac>
+
+        <jar basedir="${output}" jarfile="${output}/docnext.war" />
+    </target>
+</project>
