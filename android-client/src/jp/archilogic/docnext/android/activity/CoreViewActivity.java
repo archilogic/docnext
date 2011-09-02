@@ -68,7 +68,6 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
     // public static final String BROADCAST_EXCEPTION_ERROR = PREFIX + ".error.0001";
     public static final String BROADCAST_NO_SDCARD_ERROR = PREFIX + ".error.0003";
     public static final String BROADCAST_BROKEN_FILE_ERROR = PREFIX + ".error.0005";
-    public static final String BROADCAST_FONT_FILE_ERROR = PREFIX + ".error.font";
 
     public static final String EXTRA_ID = PREFIX + "extra.id";
     public static final String EXTRA_LOCAL_DIR = PREFIX + "extra.local.dir";
@@ -229,8 +228,6 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
                 finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
             } else if ( intent.getAction().equals( BROADCAST_BROKEN_FILE_ERROR ) ) {
                 finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.BROKEN_FILE_ERROR , R.string.trouble_with_file_error );
-            } else if ( intent.getAction().equals( BROADCAST_FONT_FILE_ERROR ) ) {
-                finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.BROKEN_FILE_ERROR , R.string.trouble_with_file_error2 );
             }
         }
 
@@ -261,7 +258,6 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
         filter.addAction( HasPage.BROADCAST_PAGE_CHANGED );
         filter.addAction( BROADCAST_NO_SDCARD_ERROR );
         filter.addAction( BROADCAST_BROKEN_FILE_ERROR );
-        filter.addAction( BROADCAST_FONT_FILE_ERROR );
 
         return filter;
     }
