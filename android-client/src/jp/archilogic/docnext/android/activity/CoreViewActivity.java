@@ -199,21 +199,6 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
                 case NETWORK_ERROR:
                     waitAndRetry( R.string.message_network_error );
                     break;
-                case STATUS_CODE_408:
-                    waitAndRetry( R.string.message_network_error );
-                    break;
-                case STATUS_CODE_401:
-                    finishWithAlert( ResultExtra.ERROR_NETWORK , R.string.download_abort_error );
-                    break;
-                case STATUS_CODE_403:
-                case STATUS_CODE_403_USERID:
-                case STATUS_CODE_403_UA:
-                    finishWithAlert( ResultExtra.ERROR_NETWORK , R.string.fatal_error );
-                    break;
-                case STATUS_CODE_404:
-                case STATUS_CODE_500:
-                    finishWithAlert( ResultExtra.ERROR_NETWORK , R.string.trouble_with_file_error );
-                    break;
                 case NO_STORAGE_SPACE:
                     finishWithAlert( ResultExtra.ERROR_NETWORK , R.string.no_space_error );
                     break;

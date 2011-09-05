@@ -89,23 +89,8 @@ public abstract class BaseDownloadTask extends NetworkTask< Void , Void > {
         if ( _httpError != null ) {
             Log.d( "docnext" , "HTTPError" + _httpError.getStatusCode() + ": " + _httpError.getResponseBody() );
 
-            switch ( _httpError.getStatusCode() ) {
-            case 401:
-                onNetworkError( TaskErrorType.STATUS_CODE_401 );
-                break;
-            case 403:
-                onNetworkError( TaskErrorType.STATUS_CODE_403 );
-                break;
-            case 404:
-                onNetworkError( TaskErrorType.STATUS_CODE_404 );
-                break;
-            case 408:
-                onNetworkError( TaskErrorType.STATUS_CODE_408 );
-                break;
-            case 500:
-                onNetworkError( TaskErrorType.STATUS_CODE_500 );
-                break;
-            }
+            onNetworkError( TaskErrorType.NETWORK_ERROR );
+
             return;
         }
 

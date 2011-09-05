@@ -58,7 +58,6 @@ public class DownloadService extends Service {
             switch ( error ) {
             case NETWORK_UNAVAILABLE:
             case NETWORK_ERROR:
-            case STATUS_CODE_408:
                 final Notification notification =
                         new Notification( R.drawable.image_notification_error , getString( R.string.network_error_notification_text ) ,
                                 System.currentTimeMillis() );
@@ -72,12 +71,6 @@ public class DownloadService extends Service {
                 break;
             case NO_STORAGE_SPACE:
             case STORAGE_NOT_MOUNTED:
-            case STATUS_CODE_401:
-            case STATUS_CODE_403:
-            case STATUS_CODE_403_USERID:
-            case STATUS_CODE_403_UA:
-            case STATUS_CODE_404:
-            case STATUS_CODE_500:
                 break;
             default:
                 throw new RuntimeException( "assert" );
