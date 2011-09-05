@@ -89,12 +89,12 @@ public class DownloadService extends Service {
                 }
             } catch ( final NoMediaMountException e ) {
                 e.printStackTrace();
-                sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+                sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
                 stop();
                 return;
             } catch ( final JSONException e ) {
                 e.printStackTrace();
-                sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+                sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
                 stop();
                 return;
             }
@@ -217,12 +217,12 @@ public class DownloadService extends Service {
             return ret;
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return 0;
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             stop();
             return 0;
         }
@@ -245,12 +245,12 @@ public class DownloadService extends Service {
             return false;
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return false;
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             stop();
             return false;
         }
@@ -273,7 +273,7 @@ public class DownloadService extends Service {
             }
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             stop();
             return;
         }
@@ -310,12 +310,12 @@ public class DownloadService extends Service {
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return;
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             stop();
             return;
         }
@@ -341,12 +341,12 @@ public class DownloadService extends Service {
                             checkDocInfo( 0 );
                         } catch ( final NoMediaMountException e ) {
                             e.printStackTrace();
-                            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+                            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
                             stop();
                             return;
                         } catch ( final JSONException e ) {
                             e.printStackTrace();
-                            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+                            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
                             stop();
                             return;
                         }
@@ -357,12 +357,12 @@ public class DownloadService extends Service {
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return;
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             stop();
             return;
         }
@@ -392,11 +392,11 @@ public class DownloadService extends Service {
                             checkDocInfo( index + 1 );
                         } catch ( final NoMediaMountException e ) {
                             e.printStackTrace();
-                            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+                            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
                             stop();
                         } catch ( final JSONException e ) {
                             e.printStackTrace();
-                            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+                            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
                             stop();
                         }
                     }
@@ -406,12 +406,12 @@ public class DownloadService extends Service {
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return;
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             stop();
             return;
         }
@@ -428,7 +428,7 @@ public class DownloadService extends Service {
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return;
         }
@@ -527,7 +527,7 @@ public class DownloadService extends Service {
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return;
         }
@@ -551,7 +551,7 @@ public class DownloadService extends Service {
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return;
         }
@@ -676,7 +676,7 @@ public class DownloadService extends Service {
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return;
         }
@@ -886,12 +886,12 @@ public class DownloadService extends Service {
             }
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             stop();
             return;
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return;
         }
@@ -921,12 +921,12 @@ public class DownloadService extends Service {
             }
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             stop();
             return;
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             stop();
             return;
         }

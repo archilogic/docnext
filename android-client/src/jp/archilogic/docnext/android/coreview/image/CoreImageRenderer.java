@@ -330,10 +330,10 @@ public class CoreImageRenderer implements Renderer {
             _state.spreadFirstPages = Kernel.getLocalProvider().getSpreadFirstPages( _state.localDir );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
     }
 

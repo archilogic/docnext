@@ -39,10 +39,10 @@ public class TOCActivity extends Activity {
                 goTo( Kernel.getLocalProvider().getInfo( _localDir ).toc.get( position ).page );
             } catch ( final NoMediaMountException e ) {
                 e.printStackTrace();
-                getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+                getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             } catch ( final JSONException e ) {
                 e.printStackTrace();
-                getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+                getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             }
         }
     };
@@ -98,10 +98,10 @@ public class TOCActivity extends Activity {
             _listView.setEmptyView( _emptyView );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
     }
 

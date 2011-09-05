@@ -80,12 +80,7 @@ public class MainActivity extends ListActivity {
     @Override
     protected void onActivityResult( final int requestCode , final int resultCode , final Intent data ) {
         if ( requestCode == REQ_CODE_VIEWER ) {
-            if ( resultCode == RESULT_OK ) {
-                System.err.println( "### retcode: " + data.getStringExtra( ViewerFacade.EXTRA_RETCODE ) + " ###" );
-                System.err.println( "### retdetail: " + data.getStringExtra( ViewerFacade.EXTRA_RETDETAIL ) + " ###" );
-            } else if ( resultCode == RESULT_CANCELED ) {
-                System.err.println( "### canceled ###" );
-            }
+            System.err.println( "### result: " + data.getSerializableExtra( ViewerFacade.EXTRA_RESULT ) + " ###" );
         }
     }
 

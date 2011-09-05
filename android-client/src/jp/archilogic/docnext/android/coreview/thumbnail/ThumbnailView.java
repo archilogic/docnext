@@ -102,10 +102,10 @@ public class ThumbnailView extends NavigationView {
             _coverFlow.setSelection( getLeftOriginPosition( _page , pages , direction ) );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
     }
 

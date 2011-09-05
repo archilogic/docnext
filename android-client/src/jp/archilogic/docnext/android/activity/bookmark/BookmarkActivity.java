@@ -61,10 +61,10 @@ public class BookmarkActivity extends Activity {
                 bindAddButtonEnabled();
             } catch ( final NoMediaMountException e ) {
                 e.printStackTrace();
-                getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+                getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
             } catch ( final JSONException e ) {
                 e.printStackTrace();
-                getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+                getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             }
         }
     };
@@ -77,7 +77,7 @@ public class BookmarkActivity extends Activity {
                 goTo( p );
             } catch ( final JSONException e ) {
                 e.printStackTrace();
-                getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+                getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
             }
         }
     };
@@ -115,16 +115,16 @@ public class BookmarkActivity extends Activity {
                         bindAddButtonEnabled();
                     } catch ( final NoMediaMountException e ) {
                         e.printStackTrace();
-                        getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+                        getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
                     } catch ( final JSONException e ) {
                         e.printStackTrace();
-                        getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+                        getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
                     }
                 }
             } );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
     }
 
@@ -140,10 +140,10 @@ public class BookmarkActivity extends Activity {
             return Kernel.getLocalProvider().getBookmarkInfo( _localDir ).contains( new BookmarkInfo( _page ) );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
 
         return false;
@@ -182,10 +182,10 @@ public class BookmarkActivity extends Activity {
             _listView.setEmptyView( _emptyView );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            getApplicationContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
     }
 

@@ -127,7 +127,7 @@ public class CoreImageState implements PageHolder {
                     _keywordTaskCount--;
                 } catch ( final NoMediaMountException e ) {
                     e.printStackTrace();
-                    _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+                    _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
                 } catch ( final IOException e ) {
                     throw new RuntimeException( e );
                 }

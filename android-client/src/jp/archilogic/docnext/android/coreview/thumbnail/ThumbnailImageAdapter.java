@@ -45,10 +45,10 @@ public class ThumbnailImageAdapter extends BaseAdapter {
             _count = doc.pages;
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
     }
 
@@ -65,7 +65,7 @@ public class ThumbnailImageAdapter extends BaseAdapter {
             return BitmapFactory.decodeByteArray( data , 0 , data.length );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final IOException e ) {
             throw new RuntimeException( e );
         }

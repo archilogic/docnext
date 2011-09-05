@@ -71,14 +71,14 @@ public class LoadBitmapTask implements Runnable {
             if ( ret == null ) {
                 // for skia decoder problem (This seems to occur on low I/O performance)
                 Log.w( "docnext" , "Failed to load bitmap. Will invoke error" );
-                _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+                _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
                 return null;
             }
 
             return ret;
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
 
             return null;
         } catch ( final IOException e ) {
@@ -95,7 +95,7 @@ public class LoadBitmapTask implements Runnable {
             return nativeLoad( data );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
 
             return 0;
         } catch ( final IOException e ) {
@@ -129,7 +129,7 @@ public class LoadBitmapTask implements Runnable {
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         }
     }
 }

@@ -67,10 +67,10 @@ public class CoreViewMenu extends LinearLayout {
             image.setImageResource( bookmark.contains( new BookmarkInfo( page ) ) ? R.drawable.button_bookmark_on : R.drawable.button_bookmark_off );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
     }
 
@@ -262,10 +262,10 @@ public class CoreViewMenu extends LinearLayout {
             bindBookmarkMenuItemIcon();
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
     }
 
@@ -278,10 +278,10 @@ public class CoreViewMenu extends LinearLayout {
             _titleView.setText( title );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
     }
 }

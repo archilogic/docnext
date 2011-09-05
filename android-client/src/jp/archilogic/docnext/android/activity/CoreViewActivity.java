@@ -6,6 +6,7 @@ import java.io.IOException;
 import jp.archilogic.docnext.android.Kernel;
 import jp.archilogic.docnext.android.R;
 import jp.archilogic.docnext.android.ViewerFacade;
+import jp.archilogic.docnext.android.ViewerFacade.ResultExtra;
 import jp.archilogic.docnext.android.activity.CombinedTouchDetector.OnCombinedTouchListener;
 import jp.archilogic.docnext.android.coreview.CoreView;
 import jp.archilogic.docnext.android.coreview.CoreViewDelegate;
@@ -65,9 +66,8 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
 
     private static final String PREFIX = CoreViewActivity.class.getName();
 
-    // public static final String BROADCAST_EXCEPTION_ERROR = PREFIX + ".error.0001";
-    public static final String BROADCAST_NO_SDCARD_ERROR = PREFIX + ".error.0003";
-    public static final String BROADCAST_BROKEN_FILE_ERROR = PREFIX + ".error.0005";
+    public static final String BROADCAST_ERROR_NO_SD_CARD = PREFIX + ".broadcast.error.no.sd.card";
+    public static final String BROADCAST_ERROR_BROKEN_FILE = PREFIX + ".broadcast.error.broken.file";
 
     public static final String EXTRA_ID = PREFIX + "extra.id";
     public static final String EXTRA_LOCAL_DIR = PREFIX + "extra.local.dir";
@@ -194,39 +194,39 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
 
                 switch ( error ) {
                 case NETWORK_UNAVAILABLE:
-                    waitAndRetry( ViewerFacade.NETWORK_ERROR , R.string.network_unavailable );
+                    waitAndRetry( R.string.network_unavailable );
                     break;
                 case NETWORK_ERROR:
-                    waitAndRetry( ViewerFacade.NETWORK_ERROR , R.string.message_network_error );
+                    waitAndRetry( R.string.message_network_error );
                     break;
                 case STATUS_CODE_408:
-                    waitAndRetry( ViewerFacade.NETWORK_ERROR , R.string.message_network_error );
+                    waitAndRetry( R.string.message_network_error );
                     break;
                 case STATUS_CODE_401:
-                    finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NETWORK_ERROR , R.string.download_abort_error );
+                    finishWithAlert( ResultExtra.ERROR_NETWORK , R.string.download_abort_error );
                     break;
                 case STATUS_CODE_403:
                 case STATUS_CODE_403_USERID:
                 case STATUS_CODE_403_UA:
-                    finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NETWORK_ERROR , R.string.fatal_error );
+                    finishWithAlert( ResultExtra.ERROR_NETWORK , R.string.fatal_error );
                     break;
                 case STATUS_CODE_404:
                 case STATUS_CODE_500:
-                    finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NETWORK_ERROR , R.string.trouble_with_file_error );
+                    finishWithAlert( ResultExtra.ERROR_NETWORK , R.string.trouble_with_file_error );
                     break;
                 case NO_STORAGE_SPACE:
-                    finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NOSPACE_ERROR , R.string.no_space_error );
+                    finishWithAlert( ResultExtra.ERROR_NETWORK , R.string.no_space_error );
                     break;
                 case STORAGE_NOT_MOUNTED:
-                    finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+                    finishWithAlert( ResultExtra.ERROR_NETWORK , R.string.no_sdcard_error );
                     break;
                 default:
                     throw new RuntimeException( "assert" );
                 }
-            } else if ( intent.getAction().equals( BROADCAST_NO_SDCARD_ERROR ) ) {
-                finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
-            } else if ( intent.getAction().equals( BROADCAST_BROKEN_FILE_ERROR ) ) {
-                finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.BROKEN_FILE_ERROR , R.string.trouble_with_file_error );
+            } else if ( intent.getAction().equals( BROADCAST_ERROR_NO_SD_CARD ) ) {
+                finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
+            } else if ( intent.getAction().equals( BROADCAST_ERROR_BROKEN_FILE ) ) {
+                finishWithAlert( ResultExtra.ERROR_BROKEN_FILE , R.string.trouble_with_file_error );
             }
         }
 
@@ -235,7 +235,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
                 Kernel.getLocalProvider().setLastOpenedPage( _localDir , ( ( HasPage ) _view ).getPage() );
             } catch ( final NoMediaMountException e ) {
                 e.printStackTrace();
-                finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+                finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
             }
         }
     };
@@ -255,8 +255,8 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
         filter.addAction( DownloadService.BROADCAST_DOWNLOAD_INIT_DOWNLOADED );
         filter.addAction( DownloadService.BROADCAST_DOWNLOAD_FAILED );
         filter.addAction( HasPage.BROADCAST_PAGE_CHANGED );
-        filter.addAction( BROADCAST_NO_SDCARD_ERROR );
-        filter.addAction( BROADCAST_BROKEN_FILE_ERROR );
+        filter.addAction( BROADCAST_ERROR_NO_SD_CARD );
+        filter.addAction( BROADCAST_ERROR_BROKEN_FILE );
 
         return filter;
     }
@@ -340,10 +340,10 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
                             checkAndRunIncomplete( id , localDir , endpoint , isSample );
                         } catch ( final NoMediaMountException e ) {
                             e.printStackTrace();
-                            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+                            finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
                         } catch ( final JSONException e ) {
                             e.printStackTrace();
-                            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.BROKEN_FILE_ERROR , R.string.trouble_with_file_error );
+                            finishWithAlert( ResultExtra.ERROR_BROKEN_FILE , R.string.trouble_with_file_error );
                         }
                     }
                 } , 1000 );
@@ -352,10 +352,10 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+            finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.BROKEN_FILE_ERROR , R.string.trouble_with_file_error );
+            finishWithAlert( ResultExtra.ERROR_BROKEN_FILE , R.string.trouble_with_file_error );
         }
     }
 
@@ -378,10 +378,10 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
                             startService( new Intent( _self , DownloadService.class ) );
                         } catch ( final NoMediaMountException e ) {
                             e.printStackTrace();
-                            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+                            finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
                         } catch ( final JSONException e ) {
                             e.printStackTrace();
-                            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.BROKEN_FILE_ERROR , R.string.trouble_with_file_error );
+                            finishWithAlert( ResultExtra.ERROR_BROKEN_FILE , R.string.trouble_with_file_error );
                         }
                     }
                 } , 1000 );
@@ -401,7 +401,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
         } else {
             Toast.makeText( _self , getString( R.string.cannot_download_in_parallel ) , Toast.LENGTH_LONG ).show();
 
-            finish( ViewerFacade.RETCODE_NORMAL , null );
+            finish( ResultExtra.NORMAL_FINISH );
         }
     }
 
@@ -439,10 +439,10 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
             return true;
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+            finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.BROKEN_FILE_ERROR , R.string.trouble_with_file_error );
+            finishWithAlert( ResultExtra.ERROR_BROKEN_FILE , R.string.trouble_with_file_error );
         }
 
         return false;
@@ -470,10 +470,10 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
                     finish();
                 } catch ( final NoMediaMountException e ) {
                     e.printStackTrace();
-                    finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+                    finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
                 } catch ( final JSONException e ) {
                     e.printStackTrace();
-                    finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.BROKEN_FILE_ERROR , R.string.trouble_with_file_error );
+                    finishWithAlert( ResultExtra.ERROR_BROKEN_FILE , R.string.trouble_with_file_error );
                 }
             }
         };
@@ -502,7 +502,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
         return Math.round( value * getResources().getDisplayMetrics().density );
     }
 
-    private void finish( final String retCode , final String retDetail ) {
+    private void finish( final ResultExtra result ) {
         try {
             if ( _isSample ) {
                 final DownloadInfo current = Kernel.getLocalProvider().getDownloadInfo();
@@ -523,24 +523,18 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
             e.printStackTrace();
         }
 
-        final Intent intent = new Intent().putExtra( ViewerFacade.EXTRA_RETCODE , retCode );
-
-        if ( retDetail != null ) {
-            intent.putExtra( ViewerFacade.EXTRA_RETDETAIL , retDetail );
-        }
-
-        setResult( RESULT_OK , intent );
+        setResult( RESULT_OK , new Intent().putExtra( ViewerFacade.EXTRA_RESULT , result ) );
 
         finish();
     }
 
-    private void finishWithAlert( final String retCode , final String retDetail , final int messageId ) {
+    private void finishWithAlert( final ResultExtra result , final int messageId ) {
         _willFinish = true;
 
         final OnClickListener yesClick = new OnClickListener() {
             @Override
             public void onClick( final DialogInterface dialog , final int which ) {
-                finish( retCode , retDetail );
+                finish( result );
             }
         };
 
@@ -583,7 +577,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
             return Kernel.getLocalProvider().isImageInitDownloaded( localDir );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+            finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
 
             return false;
         }
@@ -626,12 +620,12 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
 
         // some parameters can be null on Guest
         if ( _id == null || _localDir == null ) {
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.ILLEGAL_ARGUMENT_ERROR , R.string.fatal_error );
+            finishWithAlert( ResultExtra.ERROR_ILLEGAL_ARGUMENT , R.string.fatal_error );
             return;
         }
 
         if ( !Environment.MEDIA_MOUNTED.equals( Environment.getExternalStorageState() ) ) {
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+            finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
             return;
         }
 
@@ -641,7 +635,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
             testFile.delete();
         } catch ( final IOException e ) {
             Log.e( "docnext" , "permission error" , e );
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.PERMISION_ERROR , R.string.unexpected_error );
+            finishWithAlert( ResultExtra.ERROR_PERMISSION , R.string.unexpected_error );
             return;
         }
 
@@ -671,7 +665,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
                                 .setNegativeButton( R.string.no , null ).create();
             } catch ( final NoMediaMountException e ) {
                 e.printStackTrace();
-                finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+                finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
             }
         }
 
@@ -730,7 +724,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
             Kernel.getLocalProvider().cleanupImageTextIndex();
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+            finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
             return;
         }
 
@@ -866,7 +860,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
             Kernel.getLocalProvider().prepareImageTextIndex( _localDir );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+            finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
         }
 
         return super.onSearchRequested();
@@ -934,7 +928,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+            finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
             return;
         }
     }
@@ -956,10 +950,10 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
                     startService( new Intent( _self , DownloadService.class ) );
                 } catch ( final NoMediaMountException e ) {
                     e.printStackTrace();
-                    finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+                    finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
                 } catch ( final JSONException e ) {
                     e.printStackTrace();
-                    finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.BROKEN_FILE_ERROR , R.string.trouble_with_file_error );
+                    finishWithAlert( ResultExtra.ERROR_BROKEN_FILE , R.string.trouble_with_file_error );
                 }
             }
         };
@@ -968,7 +962,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
             @Override
             public void onClick( final DialogInterface dialog , final int which ) {
                 if ( !isShowingCoreView() ) {
-                    finish( ViewerFacade.RETCODE_ERROR , ViewerFacade.NETWORK_ERROR );
+                    finish( ResultExtra.ERROR_NETWORK );
                 }
             }
         };
@@ -1003,16 +997,16 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
             return Kernel.getLocalProvider().getInfo( _localDir ).types.get( 0 );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.NO_SDCARD_ERROR , R.string.no_sdcard_error );
+            finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.BROKEN_FILE_ERROR , R.string.trouble_with_file_error );
+            finishWithAlert( ResultExtra.ERROR_BROKEN_FILE , R.string.trouble_with_file_error );
         }
 
         return null;
     }
 
-    private void waitAndRetry( final String errorDetail , final int messageId ) {
+    private void waitAndRetry( final int messageId ) {
         final int DURATION_TO_WAIT = 3000;
 
         new Handler().postDelayed( new Runnable() {
@@ -1028,7 +1022,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
                             click = new OnClickListener() {
                                 @Override
                                 public void onClick( final DialogInterface dialog , final int which ) {
-                                    finish( ViewerFacade.RETCODE_ERROR , ViewerFacade.NETWORK_ERROR );
+                                    finish( ResultExtra.ERROR_NETWORK );
                                 }
                             };
                         }

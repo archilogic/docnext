@@ -14,21 +14,11 @@ import android.os.AsyncTask;
 import android.os.Environment;
 
 public class ViewerFacade {
-    public static final String EXTRA_RETCODE = "retcode";
-    public static final String EXTRA_RETDETAIL = "retdetail";
+    public enum ResultExtra {
+        NORMAL_FINISH , ERROR_ILLEGAL_ARGUMENT , ERROR_NO_SD_CARD , ERROR_BROKEN_FILE , ERROR_PERMISSION , ERROR_NO_STORAGE_SPACE , ERROR_NETWORK;
+    }
 
-    public static final String RETCODE_NORMAL = "0";
-    public static final String RETCODE_ERROR = "1";
-
-    // public static final String EXCEPTION_ERROR = "0001";
-    public static final String ILLEGAL_ARGUMENT_ERROR = "0002";
-    public static final String NO_SDCARD_ERROR = "0003";
-    public static final String NO_FILE_ERROR = "0004";
-    public static final String BROKEN_FILE_ERROR = "0005";
-    public static final String PERMISION_ERROR = "0006";
-    public static final String PASSCODE_ERROR = "0007";
-    public static final String NOSPACE_ERROR = "0008";
-    public static final String NETWORK_ERROR = "0009";
+    public static final String EXTRA_RESULT = ViewerFacade.class.getName() + ".extra.result";
 
     public static final int HAS_ALL_FILES_OK = 0;
     public static final int HAS_ALL_FILES_NOT_ALL = 1;

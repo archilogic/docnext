@@ -128,10 +128,10 @@ public class CoreImageView extends FrameLayout implements CoreView , HasPage , N
             return Kernel.getLocalProvider().getInfo( _renderer.getLocalDir() ).pages;
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
         return _renderer.getPage();
     }
@@ -228,10 +228,10 @@ public class CoreImageView extends FrameLayout implements CoreView , HasPage , N
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_NO_SDCARD_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final JSONException e ) {
             e.printStackTrace();
-            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_BROKEN_FILE_ERROR ) );
+            getContext().sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_BROKEN_FILE ) );
         }
     }
 
