@@ -72,8 +72,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
     public static final String EXTRA_ID = PREFIX + "extra.id";
     public static final String EXTRA_LOCAL_DIR = PREFIX + "extra.local.dir";
     public static final String EXTRA_ENDPOINT = PREFIX + "extra.endpoint";
-    public static final String EXTRA_PERMIT_TYPE = PREFIX + "extra.permit.type";
-    public static final String EXTRA_SAVE_LIMIT = PREFIX + "extra.save.limit";
+    public static final String EXTRA_IS_SAMPLE = PREFIX + "extra.is.sample";
     public static final String EXTRA_PAGE = PREFIX + "extra.page";
 
     public static final String SAMPLE_LOCAL_DIR_PARENT = Environment.getExternalStorageDirectory() + "/docnext/sample/";
@@ -619,20 +618,7 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
         _id = getIntent().getStringExtra( EXTRA_ID );
         _localDir = getIntent().getStringExtra( EXTRA_LOCAL_DIR );
         _endpoint = getIntent().getStringExtra( EXTRA_ENDPOINT );
-        final String permitType = getIntent().getStringExtra( EXTRA_PERMIT_TYPE );
-        final String saveLimit = getIntent().getStringExtra( EXTRA_SAVE_LIMIT );
-
-        if ( permitType == null || !permitType.equals( "0" ) && !permitType.equals( "1" ) ) {
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.ILLEGAL_ARGUMENT_ERROR , R.string.fatal_error );
-            return;
-        }
-
-        if ( saveLimit == null || !saveLimit.equals( "0" ) && !saveLimit.equals( "1" ) ) {
-            finishWithAlert( ViewerFacade.RETCODE_ERROR , ViewerFacade.ILLEGAL_ARGUMENT_ERROR , R.string.fatal_error );
-            return;
-        }
-
-        _isSample = permitType.equals( "0" ) || saveLimit.equals( "0" );
+        _isSample = getIntent().getBooleanExtra( EXTRA_IS_SAMPLE , false );
 
         if ( _isSample ) {
             _localDir = String.format( SAMPLE_LOCAL_DIR_FORMAT , _id );

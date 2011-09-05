@@ -50,13 +50,11 @@ public class ViewerFacade {
     }
 
     /**
-     * @param permitType
-     *            0 for sample, 1 for production
      * @param downloadEndpoint
      *            root path for document. i.e.) #{endpont}/info.json
      */
-    public Intent getViewerIntent( final Context packageContext , final String permitId , final String saveDir , final String permitType ,
-            final String saveLimit , final String storageFlag , final String downloadEndpoint ) {
+    public Intent getViewerIntent( final Context packageContext , final String permitId , final String saveDir , final boolean isSample ,
+            final String downloadEndpoint ) {
         // TODO storageFlag
 
         // Fail-safe delete
@@ -80,7 +78,7 @@ public class ViewerFacade {
 
         return new Intent( packageContext , CoreViewActivity.class ).putExtra( CoreViewActivity.EXTRA_ID , permitId )
                 .putExtra( CoreViewActivity.EXTRA_LOCAL_DIR , saveDir ).putExtra( CoreViewActivity.EXTRA_ENDPOINT , downloadEndpoint )
-                .putExtra( CoreViewActivity.EXTRA_PERMIT_TYPE , permitType ).putExtra( CoreViewActivity.EXTRA_SAVE_LIMIT , saveLimit );
+                .putExtra( CoreViewActivity.EXTRA_IS_SAMPLE , isSample );
     }
 
     public int hasAllFiles( final Context context , final String permitId , final String saveDir ) {

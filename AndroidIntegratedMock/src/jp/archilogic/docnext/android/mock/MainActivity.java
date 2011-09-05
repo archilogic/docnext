@@ -193,7 +193,7 @@ public class MainActivity extends ListActivity {
     protected void onListItemClick( final ListView l , final View v , final int position , final long id ) {
         final DemoJSON demo = ( DemoJSON ) getListAdapter().getItem( position );
 
-        requestDocument( demo.permitId , demo.endpoint , demo.permitType , demo.savelimit );
+        requestDocument( demo.permitId , demo.endpoint , demo.isSample );
     }
 
     private DemoJSON[] readDemos() {
@@ -209,13 +209,12 @@ public class MainActivity extends ListActivity {
         }
     }
 
-    private void requestDocument( final String id , final String endpoint , final String permitType , final String savelimit ) {
+    private void requestDocument( final String id , final String endpoint , final boolean isSample ) {
         final String saveDir = getSaveDir( id );
 
         // fake call
         Log.d( "hasAllFiles" , Integer.toString( ViewerFacade.getInstance().hasAllFiles( _self , id , saveDir ) ) );
 
-        startActivityForResult( ViewerFacade.getInstance().getViewerIntent( _self , id , saveDir , permitType , savelimit , null , endpoint ) ,
-                REQ_CODE_VIEWER );
+        startActivityForResult( ViewerFacade.getInstance().getViewerIntent( _self , id , saveDir , isSample , endpoint ) , REQ_CODE_VIEWER );
     }
 }
