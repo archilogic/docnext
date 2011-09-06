@@ -46,7 +46,7 @@ public class ConcatDownloadTask extends BaseDownloadTask {
         try {
             final String remotePath = _remoteDir + "?names=" + Joiner.on( "," ).join( _remoteNames );
 
-            in = new BufferedInputStream( NetUtil.get().get( remotePath ) );
+            in = new BufferedInputStream( NetUtil.get().get( remotePath ) , 8 * 1024 );
 
             for ( final String localName : _localName ) {
                 if ( !procSingle( in , _localDir + localName ) ) {
@@ -88,7 +88,7 @@ public class ConcatDownloadTask extends BaseDownloadTask {
         OutputStream out = null;
 
         try {
-            out = new BufferedOutputStream( FileUtils.openOutputStream( workFile ) );
+            out = new BufferedOutputStream( FileUtils.openOutputStream( workFile ) , 8 * 1024 );
 
             final int BUF_SIZE = 1024 * 8;
             final byte[] buf = new byte[ BUF_SIZE ];

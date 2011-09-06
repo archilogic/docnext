@@ -40,12 +40,12 @@ public class DownloadTask extends BaseDownloadTask {
                 InputStream in = null;
 
                 try {
-                    in = new BufferedInputStream( NetUtil.get().get( _remotePath ) );
+                    in = new BufferedInputStream( NetUtil.get().get( _remotePath ) , 8 * 1024 );
 
                     OutputStream out = null;
 
                     try {
-                        out = new BufferedOutputStream( FileUtils.openOutputStream( workFile ) );
+                        out = new BufferedOutputStream( FileUtils.openOutputStream( workFile ) , 8 * 1024 );
 
                         final int BUF_SIZE = 1024 * 8;
                         final byte[] buffer = new byte[ BUF_SIZE ];

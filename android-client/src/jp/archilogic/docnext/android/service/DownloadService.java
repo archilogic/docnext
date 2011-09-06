@@ -149,7 +149,6 @@ public class DownloadService extends Service {
     private int _progress = 0;
     private int _progressTotal = Integer.MAX_VALUE;
 
-    private Notification _notification;
     private long _latestNotifyTime;
 
     // private Map< Integer , PerDocumentStatus /* boolean info, boolean image, boolean searchIndex, boolean text,
@@ -270,6 +269,17 @@ public class DownloadService extends Service {
             stop();
             return;
         }
+    }
+
+    private Notification createNotification() {
+        final Notification n =
+                new Notification( R.drawable.image_notification_progress , getString( R.string.notification_progress ) , System.currentTimeMillis() );
+        n.flags |= Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT | Notification.FLAG_ONLY_ALERT_ONCE;
+        n.contentIntent = PendingIntent.getActivity( this , 0 , new Intent() , 0 );
+
+        n.contentView = new RemoteViews( getPackageName() , R.layout.notification_progress );
+
+        return n;
     }
 
     private void deleteLocalDir() {
@@ -819,11 +829,11 @@ public class DownloadService extends Service {
         final long time = SystemClock.elapsedRealtime();
 
         if ( time - _latestNotifyTime > NOTIFY_DURATION ) {
-
-            _notification.contentView.setProgressBar( R.id.progress , _progressTotal , _progress , false );
+            final Notification notification = createNotification();
+            notification.contentView.setProgressBar( R.id.progress , _progressTotal , _progress , false );
 
             final NotificationManager manager = ( NotificationManager ) getSystemService( Context.NOTIFICATION_SERVICE );
-            manager.notify( PROGRESS_NOTIFICATION_ID , _notification );
+            manager.notify( PROGRESS_NOTIFICATION_ID , notification );
 
             _latestNotifyTime = time;
         }
@@ -926,15 +936,8 @@ public class DownloadService extends Service {
     }
 
     private void showNotification() {
-        _notification =
-                new Notification( R.drawable.image_notification_progress , getString( R.string.notification_progress ) , System.currentTimeMillis() );
-        _notification.flags |= Notification.FLAG_NO_CLEAR | Notification.FLAG_ONGOING_EVENT | Notification.FLAG_ONLY_ALERT_ONCE;
-        _notification.contentIntent = PendingIntent.getActivity( this , 0 , new Intent() , 0 );
-
-        _notification.contentView = new RemoteViews( getPackageName() , R.layout.notification_progress );
-
         final NotificationManager manager = ( NotificationManager ) getSystemService( NOTIFICATION_SERVICE );
-        manager.notify( PROGRESS_NOTIFICATION_ID , _notification );
+        manager.notify( PROGRESS_NOTIFICATION_ID , createNotification() );
 
         _latestNotifyTime = SystemClock.elapsedRealtime();
     }
