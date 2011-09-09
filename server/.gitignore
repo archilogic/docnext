@@ -1,1 +1,8 @@
 /bin
+/batchComplete
+/catalina.base_IS_UNDEFINED
+/batchTarget
+/tmp
+/repository
+/native/dnconv
+/config/config.*.properties
