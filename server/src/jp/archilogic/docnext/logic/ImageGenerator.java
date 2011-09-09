@@ -34,7 +34,8 @@ public class ImageGenerator {
     private RepositoryPathManager repositoryPathManager;
 
     private void createByResolution( final String pdfPath , final String prefix , final int page , final int resolution ) {
-        ProcUtil.doProc( String.format( "%s -r %d -f %d -l %d %s %s" , prop.pdfToPpm , resolution , page + 1 , page + 1 , pdfPath , prefix ) , true );
+        ProcUtil.doProc(
+                String.format( "%s -r %d -f %d -l %d -cropbox %s %s" , prop.pdfToPpm , resolution , page + 1 , page + 1 , pdfPath , prefix ) , true );
     }
 
     public void createFromImage( final String imagePath , final long id , final int page , final boolean isUseActualSize , final int targetWidth ,
