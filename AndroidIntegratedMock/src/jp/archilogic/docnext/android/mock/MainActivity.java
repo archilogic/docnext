@@ -78,13 +78,6 @@ public class MainActivity extends ListActivity {
     }
 
     @Override
-    protected void onActivityResult( final int requestCode , final int resultCode , final Intent data ) {
-        if ( requestCode == REQ_CODE_VIEWER ) {
-            System.err.println( "### result: " + data.getSerializableExtra( ViewerFacade.EXTRA_RESULT ) + " ###" );
-        }
-    }
-
-    @Override
     public void onCreate( final Bundle savedInstanceState ) {
         super.onCreate( savedInstanceState );
         requestWindowFeature( Window.FEATURE_PROGRESS );
