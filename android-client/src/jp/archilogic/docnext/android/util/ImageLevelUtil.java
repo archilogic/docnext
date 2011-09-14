@@ -9,7 +9,8 @@ public class ImageLevelUtil {
     }
 
     public static int getMinLevel( final Resources res , final int imageMaxLevel ) {
-        return Math.min( ( int ) Math.ceil( Math.log( 1.0 * getShortSide( res ) / RemoteProvider.TEXTURE_SIZE ) / Math.log( 2 ) ) , imageMaxLevel );
+        return Math.min( Math.max( ( int ) Math.ceil( Math.log( 1.0 * getShortSide( res ) / RemoteProvider.TEXTURE_SIZE ) / Math.log( 2 ) ) , 0 ) ,
+                imageMaxLevel );
     }
 
     private static int getNumberOfLevel( final int minLevel , final int imageMaxLevel , final int imageMaxNumberOfLevel ) {
