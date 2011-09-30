@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" backgroundColor="#000000" backgroundAlpha="0.8" color="#ffffff"
+         filters="{[new BlurFilter(0,0,0)]}" paddingTop="10" paddingBottom="10" paddingLeft="10" paddingRight="10">
+    <mx:Button id="copyButton" label="Copy" />
+    <mx:Button id="changeToHighlightButton" label="Change to highlight" />
+</mx:HBox>

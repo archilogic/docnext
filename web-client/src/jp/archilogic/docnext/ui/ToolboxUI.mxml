@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Box xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:ui="jp.archilogic.docnext.ui.*"
+        xmlns:code="http://code.google.com/p/flexlib/" width="100%" height="100%" color="#ffffff"
+        filters="{[new BlurFilter(0,0,0)]}">
+    <mx:Script>
+        <![CDATA[
+            import jp.archilogic.docnext.resource.Resource;
+        ]]>
+    </mx:Script>
+
+    <mx:Box width="100%" backgroundColor="#000000" backgroundAlpha="0.8" paddingTop="10" paddingBottom="10"
+            paddingLeft="10" paddingRight="10">
+        <mx:HBox width="100%" verticalAlign="middle">
+            <mx:Label text="このページのタイトル" fontSize="20" />
+            <mx:Spacer width="100%" />
+            <mx:Label id="pageLabel" color="#ffffff" />
+            <mx:Box id="textButton" horizontalAlign="center" verticalGap="0">
+                <mx:Image source="{Resource.BUTTON_TEXT}" />
+                <mx:Label fontWeight="bold" text="Text View" />
+            </mx:Box>
+            <mx:Box id="tocButton" horizontalAlign="center" verticalGap="0">
+                <mx:Image source="{Resource.BUTTON_TOC}" />
+                <mx:Label fontWeight="bold" text="Index" />
+            </mx:Box>
+            <mx:Box id="thumbnailButton" horizontalAlign="center" verticalGap="0">
+                <mx:Image source="{Resource.BUTTON_THUMBNAIL}" />
+                <mx:Label fontWeight="bold" text="Thumbnail" />
+            </mx:Box>
+            <mx:Box id="bookmarkButton" horizontalAlign="center" verticalGap="0">
+                <mx:Image source="{Resource.BUTTON_BOOKMARK}" />
+                <mx:Label fontWeight="bold" text="Bookmark" />
+            </mx:Box>
+            <mx:Box id="searchButton" horizontalAlign="center" verticalGap="0">
+                <mx:Image source="{Resource.BUTTON_SEARCH}" />
+                <mx:Label fontWeight="bold" text="Search" />
+            </mx:Box>
+			<mx:Box id="printButton" horizontalAlign="center" verticalGap="0">
+				<mx:Image source="{Resource.BUTTON_PRINT}" />
+				<mx:Label fontWeight="bold" text="Print" />
+			</mx:Box>
+        </mx:HBox>
+    </mx:Box>
+    <mx:Spacer height="100%" />
+    <mx:HBox width="100%" backgroundColor="#000000" backgroundAlpha="0.8" paddingTop="10" paddingBottom="10"
+             paddingLeft="10" paddingRight="10">
+        <mx:Button id="beginSelectionButton" label="Begin selection" />
+        <mx:Spacer width="100%" />
+        <ui:ImageButton id="zoomOutButton" sourceNormal="{Resource.BUTTON_ZOOM_OUT}"
+                        sourceOver="{Resource.BUTTON_ZOOM_OUT_OVER}" sourceDown="{Resource.BUTTON_ZOOM_OUT_DOWN}" />
+        <ui:ImageButton id="zoomInButton" sourceNormal="{Resource.BUTTON_ZOOM_IN}"
+                        sourceOver="{Resource.BUTTON_ZOOM_IN_OVER}" sourceDown="{Resource.BUTTON_ZOOM_IN_DOWN}" />
+    </mx:HBox>
+</mx:Box>

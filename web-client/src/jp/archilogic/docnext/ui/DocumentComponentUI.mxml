@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+           xmlns:s="library://ns.adobe.com/flex/spark"
+           xmlns:mx="library://ns.adobe.com/flex/halo" xmlns:ui="jp.archilogic.docnext.ui.*" width="100%" height="100%">
+    <ui:DocumentComponentArrowIndicator id="arrowIndicator" width="100%" height="100%">
+        <s:Scroller id="scroller" width="100%" height="100%" minWidth="0" minHeight="0">
+            <s:Group id="wrapper" contentBackgroundAlpha="0" />
+        </s:Scroller>
+    </ui:DocumentComponentArrowIndicator>
+</s:Group>

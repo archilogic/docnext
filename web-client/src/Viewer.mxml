@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+                xmlns:s="library://ns.adobe.com/flex/spark"
+                xmlns:mx="library://ns.adobe.com/flex/halo" xmlns:controller="jp.archilogic.docnext.controller.*"
+                xmlns:ui="jp.archilogic.docnext.ui.*" backgroundColor="#d0d0d0" addedToStage="addToStageHandler()"
+                applicationComplete="applicationCompleteHandler()">
+
+    <fx:Script>
+        <![CDATA[
+            import flash.net.getClassByAlias;
+            import mx.controls.Alert;
+            import mx.rpc.Fault;
+            import mx.utils.ObjectUtil;
+            import __AS3__.vec.Vector;
+            import jp.archilogic.ServiceUtil;
+            import jp.archilogic.util.DebugHelper;
+            import org.libspark.ui.SWFWheel;
+
+            private function addToStageHandler() : void {
+                SWFWheel.initialize( stage );
+                DebugHelper.load( stage , this , true );
+            }
+
+            private function applicationCompleteHandler() : void {
+                ServiceUtil.defaultFaultHandler = function( fault : Fault ) : void {
+                    throw new Error( fault.message );
+                };
+
+                loaderInfo.uncaughtErrorEvents.addEventListener( UncaughtErrorEvent.UNCAUGHT_ERROR ,
+                                                                 function( e : UncaughtErrorEvent ) : void {
+                    var message : String;
+
+                    if ( e.error is Error ) {
+                        var error : Error = e.error;
+                        message =
+                            error.message + "\n----------------------------------------\n" + error.getStackTrace();
+                    } else {
+                        message = ObjectUtil.toString( e.error );
+                    }
+
+                    Alert.show( message , 'Error' );
+
+                    e.preventDefault();
+                } );
+            }
+        ]]>
+    </fx:Script>
+    <fx:Declarations>
+        <controller:ViewerController id="c" />
+    </fx:Declarations>
+
+    <s:Group width="100%" height="100%" minWidth="0" minHeight="0" >
+        <ui:DocumentComponent id="documentComponent" width="100%" height="100%" horizontalScrollPolicy="off"
+                              verticalScrollPolicy="off" />
+        <ui:Toolbox id="toolbox" width="100%" height="100%" visible="false" />
+        <ui:ThumbDockComponent id="thumbDockComponent" width="100%" height="100%" visible="false" />
+    </s:Group>
+</s:Application>

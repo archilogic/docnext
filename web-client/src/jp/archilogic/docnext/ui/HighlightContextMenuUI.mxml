@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:code="http://code.google.com/p/flexlib/"
+         backgroundColor="#000000" backgroundAlpha="0.8" color="#ffffff" filters="{[new BlurFilter(0,0,0)]}"
+         paddingTop="10" paddingBottom="10" paddingLeft="10" paddingRight="10">
+    <mx:Button id="removeHighlightButton" label="Remove highlight" />
+    <mx:Spacer width="5" />
+    <mx:Button id="redHighlightButton" label="R" />
+    <mx:Button id="greenHighlightButton" label="G" />
+    <mx:Button id="blueHighlightButton" label="B" />
+    <mx:Spacer width="5" />
+    <code:PromptingTextInput id="highlightCommentTextInput" width="200" prompt="comment" color="#000000" />
+</mx:HBox>

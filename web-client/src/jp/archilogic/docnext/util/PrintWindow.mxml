@@ -1,0 +1,432 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 width="500" height="300"
+		 title="print configure" 
+		 creationComplete="completeHandler();"
+		 close="closeHandler(event)">
+	
+	<fx:Declarations>
+		<fx:Array id="valArray">
+			<s:NumberValidator id="startPageVal" source="{startInput}" 
+							   property="text" required="true" 
+							   minValue="1" maxValue="{maxValue}"
+							   parseError="入力された文字を数字に変換できません"
+							   lessThanMinError="ページ番号は1以上です"
+							   greaterThanMaxError="ページ番号の上限は{maxValue}です"/>
+			
+			<s:NumberValidator id="endPageVal" source="{endInput}" 
+							   property="text" required="true"
+							   minValue="1" maxValue="{maxValue}"
+							   parseError="入力された文字を数字に変換できません"
+							   lessThanMinError="ページ番号は1以上です"
+							   greaterThanMaxError="ページ番号の上限は{maxValue}です"/>
+		</fx:Array>
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import jp.archilogic.docnext.helper.PageHeadHelper;
+			
+			import mx.controls.Alert;
+			import mx.core.FlexGlobals;
+			import mx.validators.Validator;
+			
+			import spark.components.Image;
+			
+			[Bindable]
+			private static var maxValue:int = 100;
+			private static var printWindow:PrintWindow;
+			
+			private var pageWidth:int;
+			private var pageHeight:int;
+			private var pageAspectRatio:Number;
+			
+			private var startIndex:int;
+			private var lastIndex:int;
+			
+			//private static var img:Image;
+			private static var _docId:int;
+			private static var _pageHeadHelper:PageHeadHelper;
+			//private static var _imageInfo:Object;
+			private static var _contentWidth : int;
+			private static var _contentHeight : int;
+			private static var maxLevel : int;
+            private static var isUseActual : Boolean;
+			
+			//public static function show(id:int, pageHeadHelper:PageHeadHelper, contentWidth:int, contentHeight:int):void
+			public static function show(id:int, pageHeadHelper:PageHeadHelper, imageInfo : Object):void
+			{
+				if(printWindow == null)
+				{
+					printWindow = new PrintWindow();
+				}
+				_docId = id;
+				_pageHeadHelper = pageHeadHelper;
+				_contentWidth = imageInfo.width;
+				_contentHeight = imageInfo.height;
+				maxLevel = imageInfo.maxLevel;
+                isUseActual = !imageInfo.isUseActualSize;
+				
+				trace("=================PrintWindow.show()=======================");
+				trace("contentWidth : " + _contentWidth);
+				trace("contentHeight : " + _contentHeight);
+				
+				maxValue = _pageHeadHelper.pageLength;
+				
+				var w:int = FlexGlobals.topLevelApplication.width;
+				var h:int = FlexGlobals.topLevelApplication.height;
+				printWindow.x = ( w - printWindow.width) * 0.5;
+				printWindow.y = ( h - printWindow.height) * 0.5;
+				
+				if(!FlexGlobals.topLevelApplication.contains(printWindow))
+				{
+					trace("not contain");
+					//Flex3がtopApplicationだと、デフォルトでlayoutがVerticalLayoutなので、SystemManagerに
+					//FlexGlobals.topLevelApplication.addElement(printWindow);
+					FlexGlobals.topLevelApplication.systemManager.addChild(printWindow);
+				}
+			}
+			private static function closeHandler(event:Event=null):void
+			{
+				//FlexGlobals.topLevelApplication.removeElement(printWindow);
+				FlexGlobals.topLevelApplication.systemManager.removeChild(printWindow);
+			}
+			private function printClickHandler(event:MouseEvent=null):void
+			{
+				var arr:Array = Validator.validateAll(valArray);
+				if(arr.length == 0)
+				{
+					startIndex = int(startInput.text) - 1;
+					lastIndex = int(endInput.text) - 1;
+					if(startIndex > lastIndex)
+					{
+						startIndex = lastIndex;
+						lastIndex = int(startInput.text);
+					}
+					
+					closeHandler();
+					doPrint();
+				}
+			}
+			private function completeHandler():void
+			{
+				startInput.text = "1";
+				endInput.text = maxValue + "";
+			}
+			private function doPrint():void
+			{
+				// FlexPrintJobは重い
+				//var printJob:PrintJob = new PrintJob();
+				printJob = new PrintJob();
+				if(!printJob.start()) 
+					return;
+				
+				printOption = new PrintJobOptions(false);
+				pageWidth = printJob.pageWidth;
+				pageHeight = printJob.pageHeight;
+				
+				pageAspectRatio = pageHeight / pageWidth ;
+				
+				//var w:int = img.sourceWidth;
+				//var h:int = img.sourceHeight;
+				
+				var isLandscape:Boolean = printJob.orientation == PrintJobOrientation.LANDSCAPE;
+				//var i:int;
+				currentIndex = startIndex;
+				if(isLandscape)
+				{
+					//headでループ
+					//singlePageじゃない時は、2ページを1枚として印刷
+					//ただ、最初と最後のheadは、singlePageじゃなくても1ページ印刷になる可能性があるのでチェック
+					var currentHead : int = _pageHeadHelper.pageToHead(currentIndex);
+					loadLandscape(currentHead);
+				}
+				else
+				{
+					//pageでループ
+					loadPortrait();
+				}
+			}
+			private var currentIndex:int;
+			private var printJob:PrintJob;
+			private var printOption:PrintJobOptions;
+			
+			
+			private function loadPortrait():void
+			{
+				if(currentIndex <= lastIndex)
+				{
+					DocumentLoadUtil.loadPageSource( _docId , 
+													currentIndex,
+													maxLevel,
+													_contentWidth, 
+													_contentHeight, 
+                                                    isUseActual ,
+													function(bitmapData:BitmapData):void {
+														
+						if( bitmapData == null )  {
+							showErrorMessage();
+							return;
+						}
+						var portraitImage:Sprite = getSinglePageImage(bitmapData);
+						printJob.addPage(portraitImage, null, printOption);
+						currentIndex++;
+						loadPortrait();
+					});
+				}
+				else
+				{
+					printJob.send();	
+				}
+			}
+			private function loadLandscape( currentHead:int) : void
+			{
+				if ( isOutOfLastHead(currentHead) ) {
+					printJob.send();
+					return;
+				}
+				var isSingle : Boolean = isSinglePage(currentHead);
+				trace("================debug=====================");
+				trace("head " + currentHead +" isSingle : " + isSingle);
+				var index : int = Math.max(startIndex, _pageHeadHelper.headToPage(currentHead));
+				trace("index : " + index );
+				trace("================debug=====================");
+				DocumentLoadUtil.loadPageSource( _docId , 
+												index,
+												maxLevel,
+												_contentWidth,
+												_contentHeight,
+                                                isUseActual ,
+												function(bitmapData:BitmapData):void
+				{
+					if( bitmapData == null )  {
+						showErrorMessage();
+						return;
+					}
+					
+					if(isSingle) {
+						var singleImage:Sprite = getSinglePageImage(bitmapData);
+						printJob.addPage(singleImage, null, printOption);
+						//currentHead++;
+						loadLandscape(currentHead + 1);
+					}
+					else {
+						DocumentLoadUtil.loadPageSource( _docId , 
+														( index + 1 ),
+														maxLevel,
+														_contentWidth,
+														_contentHeight,
+                                                        isUseActual ,
+														function(bitmapData2:BitmapData):void
+						{
+							if( bitmapData2 == null )  {
+								//throw new ArgumentError("bitmapData is null ! : PrintWindow");
+								showErrorMessage();
+								return;
+							}
+							var doubleImage :Sprite = getDoublePageImage(bitmapData2, bitmapData);
+							printJob.addPage(doubleImage, null, printOption);
+							//currentHead++;
+							loadLandscape(currentHead + 1);
+							
+						});
+					}
+				});	
+			}
+			private function showErrorMessage(): void {
+				Alert.show("通信中にエラーが発生しました");
+			}
+			private function isStartHead( head : int ) : Boolean {
+				var startHead : int = _pageHeadHelper.pageToHead(startIndex);
+				return head == startHead;
+			}
+			private function isLastHead( head : int ) : Boolean {
+				var lastHead : int = _pageHeadHelper.pageToHead(lastIndex);
+				return head == lastHead;
+			}
+			private function isOutOfLastHead(head : int ) : Boolean {
+				var lastHead : int = _pageHeadHelper.pageToHead(lastIndex);
+				return head > lastHead;
+			}
+			//private function isSinglePage(index:int):Boolean // SingleHeadじゃなくても、最初と最後のHeadがSingleになるかどうかチェックする必要がある
+			private function isSinglePage(head : int):Boolean // SingleHeadじゃなくても、最初と最後のHeadがSingleになるかどうかチェックする必要がある
+			{
+				var isSingleHead:Boolean = _pageHeadHelper.isSingleHead(head);//_pageHeadHelper.isSingleHeadByPage(currentIndex);
+				var isStart : Boolean = isStartHead(head);
+				var isLast : Boolean = isLastHead(head);
+				
+				if (!isStart && !isLast) {
+					return isSingleHead;
+				}else if(isSingleHead) {
+					return true;
+				}
+				
+				if(isStart) {
+					var isStartFore : Boolean = _pageHeadHelper.isFore(startIndex);
+					return !isStartFore ;
+				} else if (isLast) { 
+					var isLastFore : Boolean = _pageHeadHelper.isFore(lastIndex);
+					return isLastFore;
+				}
+				// the error below won't happen
+				throw new ArgumentError("PringWindow.isSinglePage has bug");
+				return true;
+			}
+			
+			private function getDoublePageImage(leftSource:BitmapData, rightSource:BitmapData):Sprite
+			{
+				var leftSourceWidth:int = leftSource.width;
+				var leftSourceHeight:int = leftSource.height;
+				var rightSourceWidth:int = rightSource.width;
+				var rightSourceHeight:int = rightSource.height;
+				var sourceWidth:int = leftSourceWidth + rightSourceWidth;
+				var sourceHeight:int = rightSourceHeight;
+				
+				trace("sourceWidth : " + sourceWidth);
+				trace("sourceHeight : " + sourceHeight);
+				
+				var centerX:int = pageWidth * 0.5;
+				
+				var pageImage:Sprite = new Sprite();
+				var leftMatrix:Matrix = new Matrix();
+				var rightMatrix:Matrix = new Matrix();
+				//var matrix:Matrix = new Matrix();
+				
+				var sourceAspectRatio:Number = sourceHeight / sourceWidth;
+				trace("sourceAspectRatio : " + sourceAspectRatio);
+				trace("pageAspectRatio : " + pageAspectRatio);
+				
+				var isFitWithWidth:Boolean = isFitWithWidth(sourceAspectRatio);
+				var scale:Number = 	isFitWithWidth ? 
+					pageWidth / sourceWidth :
+					pageHeight / sourceHeight;
+				
+				/* leftMatrix.scale(leftScale, leftScale);
+				rightMatrix.scale(rightScale, rightScale); */
+				leftMatrix.scale(scale, scale);
+				rightMatrix.scale(scale, scale);
+				var verticalPadding:int = 0, horizontalPadding:int = 0;
+				if(isFitWithWidth)
+				{
+					trace("FitWithWidth");
+					//verticalPadding = pageHeight - leftSourceHeight * leftScale - rightSourceHeight * rightScale;
+					verticalPadding = pageHeight - sourceHeight * scale;
+				}
+				else
+				{
+					trace("FitWithHeight");
+//					horizontalPadding = pageWidth - leftSourceWidth * leftScale - rightSourceWidth * rightScale ;
+					horizontalPadding = pageWidth - sourceWidth * scale;
+				}
+				//matrix.translate(paddingLeft, paddingTop);
+				trace("verticalPadding : " + verticalPadding);
+				trace("horizontalPadding : " + horizontalPadding);
+				pageImage.graphics.beginFill(0xffffff, 1);
+				pageImage.graphics.drawRect(0,0,pageWidth, pageHeight);
+				
+				var w:int, h:int;
+				w = leftSourceWidth * scale;//centerX - horizontalPadding * 0.5;//leftSourceWidth * scale;//pageWidth - horizontalPadding;
+				h = pageHeight - verticalPadding;//pageHeight - verticalPadding;
+				var leftRender:Shape = this.getPageShape(leftSource, leftMatrix, w, h);
+				leftRender.x = centerX - w;//horizontalPadding * 0.5;
+				leftRender.y = verticalPadding * 0.5;
+				
+				w = rightSourceWidth * scale; //centerX - horizontalPadding * 0.5;//rightSourceWidth * scale;
+				h = pageHeight - verticalPadding;//rightSourceHeight * scale;
+				var rightRender:Shape = this.getPageShape(rightSource, rightMatrix, w, h);
+				rightRender.x = centerX ;
+				rightRender.y =  verticalPadding * 0.5;
+				
+				pageImage.addChild(leftRender);
+				pageImage.addChild(rightRender);
+				
+				return pageImage;
+			}
+			private function getSinglePageImage(source:BitmapData):Sprite
+			{
+				var sourceWidth:int = source.width;
+				var sourceHeight:int = source.height;
+				
+				var pageImage:Sprite = new Sprite();
+				var matrix:Matrix = new Matrix();
+				
+				var sourceAspectRatio:Number = sourceHeight / sourceWidth;
+				
+				var isFitWithWidth:Boolean = isFitWithWidth(sourceAspectRatio);
+				var scale:Number = 	isFitWithWidth ? 
+					pageWidth / sourceWidth :
+					pageHeight / sourceHeight;
+				
+				trace("scale : " + scale);
+				matrix.scale(scale, scale);
+				var verticalPadding:int = 0, horizontalPadding:int = 0;
+				if(isFitWithWidth)
+				{
+					trace("FitWithWidth");
+					verticalPadding = pageHeight - sourceHeight * scale;
+				}
+				else
+				{
+					trace("FitWithHeight");
+					horizontalPadding = pageWidth - sourceWidth * scale ;
+				}
+				//matrix.translate(paddingLeft, paddingTop);
+				trace("verticalPadding : " + verticalPadding);
+				trace("horizontalPadding : " + horizontalPadding);
+				pageImage.graphics.beginFill(0xffffff, 1);
+				pageImage.graphics.drawRect(0,0,pageWidth, pageHeight);
+				pageImage.graphics.endFill();
+				
+				var w:int = sourceWidth * scale;//pageWidth - horizontalPadding;
+				var h:int = sourceHeight * scale;//pageHeight - verticalPadding;
+				var render:Shape = getPageShape(source, matrix, w, h);
+				render.x = horizontalPadding * 0.5;
+				render.y = verticalPadding * 0.5;
+				
+				pageImage.addChild(render);
+				
+				return pageImage;
+			}
+			private function getPageShape(source:BitmapData, matrix:Matrix, w:int, h:int):Shape
+			{
+				var render:Shape = new Shape();
+				// make repeat true because of non-repeat bug that draw bitmap out of rectangle
+				render.graphics.beginBitmapFill(source, matrix, true, true); 
+				render.graphics.drawRect(0, 0, w, h );
+				render.graphics.endFill();
+				
+				return render;
+			}
+			private function isFitWithWidth(sourceAspectRatio:Number):Boolean
+			{
+				return pageAspectRatio > sourceAspectRatio;// ratio = height / width
+			}
+		]]>
+	</fx:Script>
+	
+	<s:layout>
+		<s:VerticalLayout paddingLeft="5"
+						  paddingRight="5"
+						  paddingTop="5" 
+						  paddingBottom="5"/>
+			
+		
+	</s:layout>
+	
+	<s:Form id="form" width="100%" height="100%">
+		<s:FormHeading label="印刷開始ページ番号と最終印刷ページ番号を1〜{maxValue}の間で入力してください"
+					   breakOpportunity="any" width="100%"/>
+		<s:FormItem label="開始ページ番号" required="true">
+			<s:TextInput id="startInput" maxChars="100"  />
+		</s:FormItem>
+		<s:FormItem label="終了ページ番号" required="true">
+			<s:TextInput id="endInput" maxChars="100" />
+		</s:FormItem>
+		<s:FormItem>
+			<s:Button id="printButton" label="印刷" click="printClickHandler(event)"/>
+		</s:FormItem>
+	</s:Form>
+	
+</s:TitleWindow>
