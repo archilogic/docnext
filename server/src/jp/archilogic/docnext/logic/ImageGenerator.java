@@ -60,6 +60,7 @@ public class ImageGenerator {
 
         final PDFInfo pdf = new PDFInfo();
 
+        // temp pages
         pdf.pages = getPages( pdfPath );
 
         final String prefix = prop.tmp + Long.toString( id );

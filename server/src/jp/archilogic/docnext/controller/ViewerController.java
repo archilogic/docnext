@@ -73,16 +73,18 @@ public class ViewerController {
     }
 
     private void outFile( final File file , final HttpServletResponse res ) {
-        InputStream in = null;
-
         try {
-            in = FileUtils.openInputStream( file );
+            InputStream in = null;
 
-            IOUtils.copy( in , res.getOutputStream() );
+            try {
+                in = FileUtils.openInputStream( file );
+
+                IOUtils.copy( in , res.getOutputStream() );
+            } finally {
+                IOUtils.closeQuietly( in );
+            }
         } catch ( final IOException e ) {
             throw new RuntimeException( e );
-        } finally {
-            IOUtils.closeQuietly( in );
         }
     }
 }

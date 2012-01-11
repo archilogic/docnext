@@ -12,7 +12,10 @@
 #import "ImageLevelUtil.h"
 #import "Utilities.h"
 #import "ConfigProvider.h"
+#import "LocalProviderUtil.h"
+#import "ImageAnnotationInfo.h"
 #import "OrientationUtil.h"
+#import "AnnotationInfo.h"
 
 #define EPSILON 0.001
 #define FLING_VELOCITY_LIMIT 1000
@@ -43,10 +46,12 @@
 @synthesize surfaceSize;
 @synthesize direction;
 @synthesize isInteracting;
-@synthesize highlights;
+@synthesize overlay;
 @synthesize spreadFirstPages;
 @synthesize loader;
 @synthesize pageChangeListener;
+@synthesize pageChanger;
+@synthesize moviePresenter;
 
 @synthesize minScale;
 @synthesize maxScale;
@@ -66,7 +71,6 @@
         self.page = 0;
         self.matrix = [[[ImageMatrix alloc] init] autorelease];
         self.isInteracting = NO;
-        self.highlights = [NSMutableArray array];
         self.cleanup = [[[ImageCleanupValue alloc] init] autorelease];
         self.preventCheckChangePage = NO;
         self.willGoNextPage = NO;
@@ -81,10 +85,12 @@
     self.docId = nil;
     self.image = nil;
     self.matrix = nil;
-    self.highlights = nil;
+    self.overlay = nil;
     self.spreadFirstPages = nil;
     self.loader = nil;
     self.pageChangeListener = nil;
+    self.pageChanger = nil;
+    self.moviePresenter = nil;
 
     self.cleanup = nil;
     
@@ -312,9 +318,6 @@
         isMidLeft = !isRight && !isMidRight && self.matrix.tx < midLeft + EPSILON;
         isLeft = !isRight && !isMidRight && !isMidLeft;
         isTop = self.matrix.ty > 0 - EPSILON;
-        
-        NSLog(@"isRight: %d, isMidRight: %d, isMidLeft: %d, isLeft: %d", isRight, isMidRight, isMidLeft, isLeft);
-        NSLog(@"tx: %f, right: %f", self.matrix.tx, right);
     }
     
     BOOL isHorizontal = [ConfigProvider readingDirection] == ConfigProviderReadingDirectionHorizontal;
@@ -389,6 +392,29 @@
     return MIN(1.0 * self.surfaceSize.width / self.pageSize.width, 1.0 * self.surfaceSize.height / self.pageSize.height) * 2;
 }
 
+- (void)runAnnotation:(ImageAnnotationInfo *)imageAnnotation {
+    AnnotationInfo* annotation = imageAnnotation.annotation;
+    
+    if ([annotation isKindOfClass:[PageLinkAnnotationInfo class]]) {
+        PageLinkAnnotationInfo* pl = (PageLinkAnnotationInfo *)annotation;
+
+        [self.pageChanger changePage:pl.page refresh:YES];
+    } else if ([annotation isKindOfClass:[URILinkAnnotationInfo class]]) {
+        URILinkAnnotationInfo* ul = (URILinkAnnotationInfo *)annotation;
+        
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:ul.uri]];
+    } else if ([annotation isKindOfClass:[MovieAnnotationInfo class]]) {
+        for (int delta = -1; delta <= 1; delta++) {
+            [self.loader unloadRest:page + delta];
+            
+        }
+
+        [self.moviePresenter showMovie:imageAnnotation];
+    } else {
+        assert(0);
+    }
+}
+
 #pragma mark public
 
 - (void)doubleTap:(CGPoint)point {
@@ -447,13 +473,47 @@
     self.matrix.ty = 0;
 }
 
+- (void)loadOverlay {
+    NSMutableArray* buf = [NSMutableArray arrayWithCapacity:self.pages];
+    
+    for (int p = 0; p < self.pages; p++) {
+        NSMutableArray* pBuf = [NSMutableArray array];
+        
+        for (AnnotationInfo* a in [LocalProviderUtil annotation:self.docId page:p]) {
+            [pBuf addObject:[ImageAnnotationInfo infoWithAnnotation:a]];
+        }
+        
+        [buf addObject:pBuf];
+    }
+    
+    self.overlay = buf;
+}
+
 - (BOOL)isCleanup {
     return self.cleanup.isIn;
 }
 
-- (void)tap:(CGPoint)point {
+- (BOOL)tap:(CGPoint)point {
     const int THREASHOLD = 4;
     
+    int nDeleta = self.nPage;
+    for (int delta = -nDeleta; delta <= nDeleta; delta++) {
+        int p = self.page + delta;
+        
+        if (p >= 0 && p < self.pages) {
+            for (ImageAnnotationInfo* i in AT(self.overlay, p)) {
+                if (CGRectContainsPoint(i.frame, point)) {
+                    [self runAnnotation:i];
+                    return NO;
+                }
+            }
+        }
+    }
+    
+    if (point.y < self.surfaceSize.height / THREASHOLD || !(point.x < self.surfaceSize.width / THREASHOLD || point.x > self.surfaceSize.width - self.surfaceSize.width / THREASHOLD)) {
+        return YES;
+    }
+
     BOOL isFrameMode = fabs(self.matrix.scale - self.calcDoubleScale) < EPSILON;
 
     if (isFrameMode) {
@@ -479,6 +539,8 @@
             self.willGoPrevPage = YES;
         }
     }
+    
+    return NO;
 }
 
 /**

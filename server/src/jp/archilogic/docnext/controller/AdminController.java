@@ -47,7 +47,7 @@ public class AdminController {
     @Autowired
     private PersistManager persistManager;
 
-    private String doBatch( final boolean isWebp ) {
+    private String doBatch( final boolean isWebp , final int pageLimit ) {
         int nFiles = 0;
         int nSucceeded = 0;
 
@@ -69,7 +69,7 @@ public class AdminController {
                 final String path = prop.tmp + doc.id + File.separator + "uploaded" + doc.id + "." + FilenameUtils.getExtension( file.getName() );
                 FileUtils.copyFile( file , new File( path ) );
 
-                uploadProcessor.procSync( path , doc , isWebp );
+                uploadProcessor.procSync( path , doc , isWebp , pageLimit );
 
                 tryMoveAndRename( file , new File( prop.batchCompleteDir , file.getName() ) );
 
@@ -108,8 +108,9 @@ public class AdminController {
 
     @RequestMapping( "/admin/invokeBatch" )
     @ResponseBody
-    public String invokeBatch( @RequestParam( "isWebp" ) final boolean isWebp ) {
-        return doBatch( isWebp );
+    public String invokeBatch( @RequestParam( value = "isWebp" , required = false , defaultValue = "false" ) final boolean isWebp ,
+            @RequestParam( value = "pageLimit" , required = false , defaultValue = "2000000000" ) final int pageLimit ) {
+        return doBatch( isWebp , pageLimit );
     }
 
     private String procUpload( final String name , final MultipartFile file , final int actualWidth ) throws IOException {
@@ -126,7 +127,7 @@ public class AdminController {
         final String path = prop.tmp + doc.id + File.separator + "uploaded" + doc.id + "." + FilenameUtils.getExtension( file.getOriginalFilename() );
         FileUtils.writeByteArrayToFile( new File( path ) , file.getBytes() );
 
-        uploadProcessor.proc( path , doc );
+        uploadProcessor.proc( path , doc , Integer.MAX_VALUE );
 
         progressManager.setStep( doc.id , Step.WAITING_EXEC );
 

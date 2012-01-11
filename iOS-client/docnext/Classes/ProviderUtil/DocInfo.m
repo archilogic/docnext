@@ -22,6 +22,7 @@
 @synthesize publisher;
 @synthesize binding;
 @synthesize flow;
+@synthesize version;
 
 #pragma mark private
 
@@ -174,17 +175,15 @@
     DocInfo* ret = [[[DocInfo alloc] init] autorelease];
 
     ret.docId = FOR(dict, @"id");
-
     ret.types = [self convertTypes:FOR(dict, @"types")];
-    
     ret.pages = FOR_I(dict, @"pages");
     ret.singlePages = FOR(dict, @"singlePages");
     ret.toc = FOR(dict, @"toc");
     ret.title = FOR(dict, @"title");
     ret.publisher = FOR(dict, @"publisher");
-    
     ret.binding = [self parseBinding:FOR(dict, @"binding")];
     ret.flow = [self parseFlow:FOR(dict, @"flow")];
+    ret.version = FOR_I(dict, @"version");
     
     return ret;
 }

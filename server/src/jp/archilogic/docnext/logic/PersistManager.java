@@ -13,6 +13,7 @@ import java.util.zip.ZipOutputStream;
 
 import jp.archilogic.docnext.dto.Region;
 import jp.archilogic.docnext.dto.TOCElem;
+import jp.archilogic.docnext.logic.PDFAnnotationParser.PageAnnotationInfo;
 import jp.archilogic.docnext.type.BindingType;
 import jp.archilogic.docnext.type.DocumentType;
 import jp.archilogic.docnext.type.FlowDirectionType;
@@ -37,6 +38,7 @@ public class PersistManager {
         public boolean isUseActualSize;
         public int maxNumberOfLevel;
         public boolean isWebp;
+        public boolean hasAnnotation = true;
 
         // for JSONIC
         public ImageJson() {
@@ -65,6 +67,7 @@ public class PersistManager {
         // This parameters should be here?
         public BindingType binding;
         public FlowDirectionType flow;
+        public int version = 1;
 
         // public Long[] ids; // for multiple documents
 
@@ -163,6 +166,10 @@ public class PersistManager {
         } catch ( final IOException e ) {
             throw new RuntimeException( e );
         }
+    }
+
+    public void writeImageAnnotationJson( final long id , final int page , final List< PageAnnotationInfo > annotation ) {
+        writeJson( repositoryPathManager.getImageAnnotationPath( id , page ) , annotation );
     }
 
     public void writeImageInfoJson( final long id , final ImageJson json ) {

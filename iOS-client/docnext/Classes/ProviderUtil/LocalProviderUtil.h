@@ -24,5 +24,6 @@
 + (BOOL)isAllTopImageExists:(NSString *)docId page:(int)page;
 + (int)lastOpenedPage:(NSString *)docId;
 + (void)setLastOpenedPage:(NSString *)docId page:(int)page;
++ (NSArray *)annotation:(NSString *)docId page:(int)page;
 
 @end

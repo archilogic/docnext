@@ -18,7 +18,13 @@
     <context:component-scan base-package="jp.archilogic" />
 
     <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
-        <property name="location" value="classpath:config.${user.name}.properties" />
+        <property name="locations">
+            <list>
+                <value>classpath:config.${user.name}.properties</value>
+                <value>classpath:scm.properties</value>
+                <value>classpath:version.properties</value>
+            </list>
+        </property>
     </bean>
 
     <dwr:controller debug="true" />

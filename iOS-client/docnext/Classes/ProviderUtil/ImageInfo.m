@@ -21,6 +21,7 @@
 @synthesize isWebp;
 @synthesize hasConcatFile;
 @synthesize spreadOnlyPages;
+@synthesize hasAnnotation;
 
 //@return list.get( portrait-page ) == spread-page
 - (NSArray *)portraitPageToSpreadPage:(DocInfo *)doc {
@@ -89,6 +90,8 @@
     if (!ret.spreadOnlyPages) {
         ret.spreadOnlyPages = [NSArray array];
     }
+    
+    ret.hasAnnotation = FOR_B(dict, @"hasAnnotation");
     
     return ret;
 }

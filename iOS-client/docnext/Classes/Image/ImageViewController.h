@@ -15,6 +15,8 @@
 #import "FlowCoverView.h"
 #import "EAGLView.h"
 
+@class ImageAnnotationInfo;
+
 @protocol PageLoader <NSObject>
 
 - (void)loadTop:(int)page;
@@ -36,11 +38,24 @@
 
 @end
 
-@interface ImageViewController : UIViewController <GestureRecognizerDelegate, PageLoader, TextureBinder, PageChangeListener, UIAlertViewDelegate, ESRendererDelegate, FlowCoverViewDelegate, UITableViewDataSource, UITableViewDelegate, UITextViewDelegate>
+@protocol PageChanger <NSObject>
+
+- (void)changePage:(int)page refresh:(BOOL)refresh;
+
+@end
+
+@protocol MoviePresenter <NSObject>
+
+- (void)showMovie:(ImageAnnotationInfo *)info;
+
+@end
+
+@interface ImageViewController : UIViewController <GestureRecognizerDelegate, PageLoader, TextureBinder, PageChangeListener, UIAlertViewDelegate, ESRendererDelegate, FlowCoverViewDelegate, UITableViewDataSource, UITableViewDelegate, UITextViewDelegate, PageChanger, MoviePresenter>
 
 @property(nonatomic, retain) IBOutlet GestureRecognizerView* gestureRecognizerView;
 @property(nonatomic, retain) IBOutlet UIView* pageLoadingView;
 @property(nonatomic, retain) IBOutlet UIView* menuView;
+@property(nonatomic, retain) IBOutlet UILabel* memoryView;
 @property(nonatomic, retain) IBOutlet UILabel* pageInfoLabel;
 @property(nonatomic, retain) IBOutlet UIButton* toggleBookmarkButton;
 @property(nonatomic, retain) IBOutlet UIView* menuButtonsView;
@@ -86,9 +101,10 @@
 - (IBAction)backClick;
 - (IBAction)hideMenuClick;
 - (void)setParams:(NSString* )docId permitType:(DownloaderPermitType)permitType;
-- (void)changePage:(int)page refresh:(BOOL)refresh;
 - (void)bindMenuInfo;
-
+- (natural_t)get_free_memory;
+- (u_int)get_resident_size;
+- (void)updateMemoryUsage;
 - (IBAction)thumbnailPageSliderChanged;
 
 @end

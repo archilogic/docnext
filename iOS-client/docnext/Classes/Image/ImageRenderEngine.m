@@ -13,15 +13,19 @@
 #import "ImageDirectionMethod.h"
 #import "ImageLevelUtil.h"
 #import "Utilities.h"
+#import "ImageAnnotationInfo.h"
 #import "OrientationUtil.h"
 
 #define PAGE_SPACE 30
+#define MOVIE_ANNOTATION_BLINK_DURATION 0.5
 
 @interface ImageRenderEngine ()
 
 @property(nonatomic, retain) TextureInfo* background;
 @property(nonatomic, retain) TextureInfo* blank;
 @property(nonatomic, retain) TextureInfo* red;
+@property(nonatomic, retain) TextureInfo* darkBlack;
+@property(nonatomic, retain) TextureInfo* lightBlack;
 @property(nonatomic, retain) NSArray* pages;
 @property(nonatomic) int nPage;
 @property(nonatomic, retain) ImageMatrix* immutableMatrix;
@@ -38,6 +42,8 @@
 @synthesize background;
 @synthesize blank;
 @synthesize red;
+@synthesize darkBlack;
+@synthesize lightBlack;
 @synthesize pages;
 @synthesize nPage;
 @synthesize immutableMatrix;
@@ -61,6 +67,8 @@
     self.background = nil;
     self.blank = nil;
     self.red = nil;
+    self.darkBlack = nil;
+    self.lightBlack = nil;
     self.pages = nil;
     self.immutableMatrix = nil;
     self.toPortraitPage = nil;
@@ -166,9 +174,9 @@
         for (int delta = -nDeleta; delta <= nDeleta; delta++) {
             int page = state.page + delta;
             
-            CGSize pageSpacing = [self pageSpacing:matrix state:state page:page delta:delta];
-            
             if (page >= 0 && page < self.nPage) {
+                CGSize pageSpacing = [self pageSpacing:matrix state:state page:page delta:delta];
+
                 if (AT(self.toPortraitPage, page) == [NSNull null]) {
                     int x = rint([matrix x:0] + padding.width + [matrix length:state.pageSize.width - 1] * delta * xSign) + pageSpacing.width;
                     int y = rint(state.surfaceSize.height - ([matrix y:0] + padding.height + [matrix length:state.pageSize.height - 1] * delta * ySign)) + pageSpacing.height;
@@ -222,6 +230,44 @@
     }
 }
 
+- (void)drawOverlay:(ImageMatrix *)matrix padding:(CGSize)padding state:(ImageState *)state {
+    int xSign = [ImageDirectionMethod toXSign:state.direction];
+    int ySign = [ImageDirectionMethod toYSign:state.direction];
+    
+    int nDeleta = state.nPage;
+    for (int delta = -nDeleta; delta <= nDeleta; delta++) {
+        int page = state.page + delta;
+        
+        if (page >= 0 && page < self.nPage) {
+            CGSize pageSpacing = [self pageSpacing:matrix state:state page:page delta:delta];
+            
+            float x = [matrix x:0] + padding.width + pageSpacing.width + [matrix length:state.pageSize.width - 1] * delta * xSign;
+            float width = [matrix length:state.pageSize.width];
+            float y = [matrix y:0] + padding.height - pageSpacing.height - [matrix length:state.pageSize.height - 1] * delta * ySign;
+            float height = [matrix length:state.pageSize.height];
+            
+            for (ImageAnnotationInfo* i in AT(state.overlay, page)) {
+                CGRect r = i.annotation.region;
+                i.frame = CGRectMake(rint(x + r.origin.x * width), rint(y + r.origin.y * height), rint(r.size.width * width), rint(r.size.height * height));
+                
+                GLuint texId;
+                
+                if ([i.annotation isKindOfClass:[URILinkAnnotationInfo class]] || [i.annotation isKindOfClass:[PageLinkAnnotationInfo class]]) {
+                    texId = self.red.texId;
+                } else if ([i.annotation isKindOfClass:[MovieAnnotationInfo class]]) {
+                    int iTime = CFAbsoluteTimeGetCurrent() / MOVIE_ANNOTATION_BLINK_DURATION;
+                    
+                    texId = iTime % 2 ? self.darkBlack.texId : self.lightBlack.texId;
+                } else {
+                    assert(0);
+                }
+                
+                [self drawSingleImage:texId x:i.frame.origin.x y:state.surfaceSize.height - i.frame.origin.y - i.frame.size.height w:i.frame.size.width h:i.frame.size.height];
+            }
+        }
+    }
+}
+
 #pragma mark public
 
 - (void)bindPageImage:(BindQueueItem *)item minLevel:(int)minLevel {
@@ -229,7 +275,7 @@
     
     [texture resetTexture];
     
-    [texture bindTexture:item.data imageSize:CGSizeMake(TEXTURE_SIZE, TEXTURE_SIZE)];
+    [texture bindTexture:item.data imageSize:CGSizeMake(TEXTURE_SIZE, TEXTURE_SIZE) use565:YES];
     free(item.data);
     item.data = nil;
     
@@ -282,7 +328,9 @@
     
     self.background = [TextureInfo infoWithTiledImage:[UIImage imageNamed:@"background.png"] size:surfaceSize];
     self.blank = [TextureInfo infoWithColor:1 g:1 b:1 alpha:1];
-    self.red = [TextureInfo infoWithColor:1 g:0 b:0 alpha:0.4];
+    self.red = [TextureInfo infoWithColor:1 g:0.8 b:0.6 alpha:0.4];
+    self.darkBlack = [TextureInfo infoWithColor:0 g:0.6 b:0 alpha:0.5];
+    self.lightBlack = [TextureInfo infoWithColor:0 g:0.6 b:0 alpha:0.2];
     
     NSMutableArray* arr = [NSMutableArray array];
     for (int page = 0; page < self.mod ; page++) {
@@ -304,6 +352,8 @@
         [self drawBackground];
         
         [self drawImage:self.immutableMatrix padding:self.immutablePadding state:state];
+        
+        [self drawOverlay:self.immutableMatrix padding:self.immutablePadding state:state];
     } else {
         [self drawBigBackground];
     }

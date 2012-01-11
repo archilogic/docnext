@@ -30,6 +30,10 @@
     return [NSString stringWithFormat:@"/docs/%@/", docId];
 }
 
++ (NSString *)imageAnnotationPath:(NSString *)docId page:(int)page {
+    return [NSString stringWithFormat:@"%@%d.anno.json", [self imageDir:docId], page];
+}
+
 + (NSString *)imageDir:(NSString *)docId {
     return [NSString stringWithFormat:@"%@image/", [self docDir:docId]];
 }

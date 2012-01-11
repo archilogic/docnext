@@ -64,7 +64,7 @@
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
 
-    [[[[UIAlertView alloc] initWithTitle:@"Sorry, not enough memory :(" message:nil delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] autorelease] show];
+    [[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"error_dialog_title", @"") message:NSLocalizedString(@"memory_error_dialog_message", @"") delegate:nil cancelButtonTitle:NSLocalizedString(@"ok", @"") otherButtonTitles:nil] autorelease] show];
 }
 
 - (IBAction)clearButtonClick:(id)sender {

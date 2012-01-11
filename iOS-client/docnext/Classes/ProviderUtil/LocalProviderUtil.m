@@ -13,6 +13,7 @@
 #import "ImageLevelUtil.h"
 #import "Utilities.h"
 #import "BookmarkInfo.h"
+#import "AnnotationInfo.h"
 
 @implementation LocalProviderUtil
 
@@ -31,7 +32,7 @@
 }
 
 + (NSString *)tocText:(NSString *)docId page:(int)page {
-    NSString* ret = @"NO TITLE";
+    NSString* ret = NSLocalizedString(@"toc_no_title", @"");
 
     for (NSDictionary* toc in [[self info:docId] toc:[self imageInfo:docId]]) {
         int tocPage = FOR_I(toc, @"page");
@@ -119,6 +120,20 @@
 
 + (void)setLastOpenedPage:(NSString *)docId page:(int)page {
     [[NSString stringWithFormat:@"%d", page] writeToFile:[FileUtil fullPath:[LocalPathUtil lastOpenedPagePath:docId]] atomically:YES encoding:NSUTF8StringEncoding error:nil];
+}
+
++ (NSArray *)annotation:(NSString *)docId page:(int)page {
+    NSMutableArray* buf = [NSMutableArray array];
+    
+    if (![FileUtil exists:[LocalPathUtil imageAnnotationPath:docId page:page]]) {
+        return buf;
+    }
+    
+    for (NSDictionary* dict in [self jsonInfo:[LocalPathUtil imageAnnotationPath:docId page:page]]) {
+        [buf addObject:[AnnotationInfo infoWithDictionary:dict]];
+    }
+
+    return buf;
 }
 
 @end

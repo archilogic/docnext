@@ -24,6 +24,9 @@
 #import "ImageListItemCell.h"
 #import "BookmarkInfo.h"
 #import "OrientationUtil.h"
+#import "ImageAnnotationInfo.h"
+
+#import <MediaPlayer/MediaPlayer.h>
 
 #define CONFIRM_RESTORE_LAST_OPENED_PAGE_TAG 123
 #define CONFIRM_FINISH_TAG 234
@@ -38,13 +41,14 @@
 @property(nonatomic) DownloaderPermitType permitType;
 @property(nonatomic) BOOL initialized;
 @property(nonatomic, assign) UIView* currentMenuView;
-@property(nonatomic, assign) UIView* currentChangePageView;
 @property(nonatomic, retain) NSMutableArray* toc;
 @property(nonatomic, retain) NSMutableArray *bookmarks;
 @property(nonatomic) BOOL downloadCompleted;
 @property(nonatomic) int lastSelectedBookmarkTextViewIndex;
 @property(nonatomic) CGSize thumbnailSize;
 @property(nonatomic, retain) NSArray* toPortraitPage;
+@property(nonatomic, retain) MPMoviePlayerController* moviePlayer;
+@property(nonatomic) UIInterfaceOrientation orientationOnEnterMovie;
 
 @end
 
@@ -53,6 +57,7 @@
 @synthesize gestureRecognizerView;
 @synthesize pageLoadingView;
 @synthesize menuView;
+@synthesize memoryView;
 @synthesize pageInfoLabel;
 @synthesize toggleBookmarkButton;
 @synthesize menuButtonsView;
@@ -92,13 +97,14 @@
 @synthesize permitType;
 @synthesize initialized;
 @synthesize currentMenuView;
-@synthesize currentChangePageView;
 @synthesize toc;
 @synthesize bookmarks;
 @synthesize downloadCompleted;
 @synthesize lastSelectedBookmarkTextViewIndex;
 @synthesize thumbnailSize;
 @synthesize toPortraitPage;
+@synthesize moviePlayer;
+@synthesize orientationOnEnterMovie;
 
 - (void)err:(NSString *)tag {
     GLenum err = glGetError();
@@ -115,6 +121,11 @@
 - (CGPoint)convertCGPoint:(CGPoint)point {
     float f = self.view.contentScaleFactor;
     return CGPointMake(point.x * f, point.y * f);
+}
+
+- (CGRect)invertCGRect:(CGRect)rect {
+    float f = self.view.contentScaleFactor;
+    return CGRectMake(rect.origin.x / f, rect.origin.y / f, rect.size.width / f, rect.size.height / f);
 }
 
 - (void)applyBrightness {
@@ -214,6 +225,10 @@
         }
     }
     
+    if ([LocalProviderUtil isCompleted:self.state.docId]) {
+        [self.state loadOverlay];
+    }
+    
     self.thumbnailFlowCoverView.imageRatio = 1.0 * self.state.image.width / self.state.image.height;
     
     [self bindMenuInfo];
@@ -224,8 +239,9 @@
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) seems not valid
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-    //glEnable(GL_ALPHA_BITS);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    // glEnable(GL_ALPHA_BITS);
 }
 
 - (void)prepareGL {
@@ -259,15 +275,13 @@
 
 - (void)confirmRestoreLastOpenedPage {
     if ([LocalProviderUtil lastOpenedPage:self.state.docId] != -1) {
-        UIAlertView* alert = [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"confirm", @"confirm dialog title") message:NSLocalizedString(@"message_confirm_restore", @"confirm restore message") delegate:self cancelButtonTitle:NSLocalizedString(@"cancel", @"cancel button") otherButtonTitles:NSLocalizedString(@"ok", @"submit button"), nil] autorelease];
+        UIAlertView* alert = [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"confirm_dialog_title", @"") message:NSLocalizedString(@"restore_confirm_dialog_message", @"") delegate:self cancelButtonTitle:NSLocalizedString(@"cancel", @"") otherButtonTitles:NSLocalizedString(@"ok", @""), nil] autorelease];
         alert.tag = CONFIRM_RESTORE_LAST_OPENED_PAGE_TAG;
         [alert show];
     }
 }
 
 - (void)showView {
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onDownloaderTextureProgress:) name:DOWNLOADER_TEXTURE_PROGRESS object:nil];
-
     [self setupGL];
     [self prepareData];
     
@@ -295,6 +309,8 @@
         self.state = [[[ImageState alloc] init] autorelease];
         self.state.loader = self;
         self.state.pageChangeListener = self;
+        self.state.pageChanger = self;
+        self.state.moviePresenter = self;
         
         self.renderEngine = [[[ImageRenderEngine alloc] init] autorelease];
         self.renderEngine.mod = [OrientationUtil isSpreadMode] ? 6 : 3;
@@ -305,31 +321,40 @@
         self.initialized = NO;
         self.currentMenuView = nil;
         self.thumbnailSize = CGSizeMake(190, 190);
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onMoviePlayerDidExitFullscreen:) name:MPMoviePlayerDidExitFullscreenNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onMoviePlayerWillExitFullscreen:) name:MPMoviePlayerWillExitFullscreenNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onMoviePlayerPlaybackDidFinish:) name:MPMoviePlayerPlaybackDidFinishNotification object:nil];
     }
     
     return self;
 }
 
 - (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:CONFIG_CHANGED object:nil];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_PROGRESS object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_COMPLETE object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_TEXTURE_PROGRESS object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_ANNOTATION_PROGRESS object:nil];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardDidShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillHideNotification object:nil];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMoviePlayerDidExitFullscreenNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMoviePlayerWillExitFullscreenNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMoviePlayerPlaybackDidFinishNotification object:nil];
+    
     for (LoadImageTask* task in self.executor.operations) {
         task.abort = YES;
     }
     [self.executor cancelAllOperations];
+    [self.executor waitUntilAllOperationsAreFinished];
     
     if (self.permitType == DownloaderPermitTypeSample) {
         [[Downloader instance] removeItem:self.state.docId];
         [[NSFileManager defaultManager] removeItemAtPath:[FileUtil fullPath:[LocalPathUtil docDir:self.state.docId]] error:nil];
     }
-    
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:CONFIG_CHANGED object:nil];
-    
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_PROGRESS object:nil];
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_COMPLETE object:nil];
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_IMAGE_INIT_DOWNLOADED object:nil];
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_TEXTURE_PROGRESS object:nil];
-    
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardDidShowNotification object:nil];
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillHideNotification object:nil];
     
     self.gestureRecognizerView = nil;
     self.pageLoadingView = nil;
@@ -371,10 +396,10 @@
     self.bindQueue = nil;
     self.unbindQueue = nil;
     self.currentMenuView = nil;
-    self.currentChangePageView = nil;
     self.toc = nil;
     self.bookmarks = nil;
     self.toPortraitPage = nil;
+    self.moviePlayer = nil;
     
     [super dealloc];
 }
@@ -455,12 +480,17 @@
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onDownloaderProgress:) name:DOWNLOADER_PROGRESS object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onDownloaderComplete:) name:DOWNLOADER_COMPLETE object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onDownloaderTextureProgress:) name:DOWNLOADER_TEXTURE_PROGRESS object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onDownloaderAnnotationProgress:) name:DOWNLOADER_ANNOTATION_PROGRESS object:nil];
     }
     
     [self.thumbnailFlowCoverView setContext:((EAGLView *)self.view).renderer.context];
-    self.currentChangePageView = self.thumbnailView;
     
     [self performSelector:@selector(confirmRestoreLastOpenedPage) withObject:nil afterDelay:0.5];
+}
+
+- (void)updateMemoryUsage {
+    self.memoryView.text = [NSString stringWithFormat:@"free memory:%dMB, current task:%dMB", [self get_free_memory] / 1024 / 1024, [self get_resident_size] / 1024 / 1024 ];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -572,7 +602,7 @@
 - (IBAction)toggleBookmarkButtonClick  {
     NSMutableArray* newBookmarks = [NSMutableArray arrayWithArray:[LocalProviderUtil bookmark:self.state.docId]];
     
-    BookmarkInfo* info = [BookmarkInfo info:AT_AS([self.state.image toSpreadPage:[LocalProviderUtil info:self.state.docId]], self.state.page, NSNumber).intValue comment:@"No comment"];
+    BookmarkInfo* info = [BookmarkInfo info:AT_AS([self.state.image toSpreadPage:[LocalProviderUtil info:self.state.docId]], self.state.page, NSNumber).intValue comment:NSLocalizedString(@"bookmark_no_comment", @"")];
     
     if ([newBookmarks containsObject:info]) {
         [newBookmarks removeObject:info];
@@ -699,7 +729,7 @@
 }
 
 - (IBAction)backClick {
-    UIAlertView* alert = [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"confirm", @"confirm dialog title") message:NSLocalizedString(@"message_confirm_finish", @"confirm finish message") delegate:self cancelButtonTitle:NSLocalizedString(@"ok", @"submit button") otherButtonTitles:NSLocalizedString(@"cancel", @"cancel button"), nil] autorelease];
+    UIAlertView* alert = [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"confirm_dialog_title", @"") message:NSLocalizedString(@"finish_confirm_dialog_message", @"") delegate:self cancelButtonTitle:NSLocalizedString(@"ok", @"") otherButtonTitles:NSLocalizedString(@"cancel", @""), nil] autorelease];
     alert.tag = CONFIRM_FINISH_TAG;
     [alert show];
 }
@@ -716,6 +746,27 @@
     self.state.docId = docId;
     self.permitType = p_permitType;
 }
+
+- (void)bindMenuInfo {
+    self.pageInfoLabel.text = [NSString stringWithFormat:@"%@ ( %d / %d page )", [LocalProviderUtil tocText:self.state.docId page:self.state.page], self.state.page + 1, self.state.pages];
+    
+    NSArray* toSpread = [self.state.image toSpreadPage:[LocalProviderUtil info:self.state.docId]];
+    NSString* bookmarkImageName = [[LocalProviderUtil bookmark:self.state.docId] containsObject:[BookmarkInfo info:AT_AS(toSpread, self.state.page, NSNumber).intValue comment:nil]] ? @"button_bookmark_on" : @"button_bookmark_off";
+    [self.toggleBookmarkButton setImage:[UIImage imageNamed:bookmarkImageName] forState:UIControlStateNormal];
+}
+
+- (IBAction)thumbnailPageSliderChanged {
+    int cover = floor(self.thumbnailPageSlider.value + 0.5);
+    
+    if (cover != self.thumbnailFlowCoverView.offset) {
+        self.thumbnailFlowCoverView.offset = cover;
+        [self.thumbnailFlowCoverView draw];
+        
+        [self setThumbnailLabels:[self thumbnailLeftOriginPosition:cover]];
+    }
+}
+
+#pragma mark PageChanger
 
 - (void)changePage:(int)page refresh:(BOOL)refresh {
     if (refresh) {
@@ -737,7 +788,7 @@
     }
     
     self.state.page = page;
-
+    
     if (refresh) {
         if ([OrientationUtil isSpreadMode]) {
             [self loadTop:self.state.page];
@@ -761,25 +812,6 @@
     [LocalProviderUtil setLastOpenedPage:self.state.docId page:page];
 
     self.menuView.alpha = 0;
-}
-
-- (void)bindMenuInfo {
-    self.pageInfoLabel.text = [NSString stringWithFormat:@"%@ ( %d / %d page )", [LocalProviderUtil tocText:self.state.docId page:self.state.page], self.state.page + 1, self.state.pages];
-    
-    NSArray* toSpread = [self.state.image toSpreadPage:[LocalProviderUtil info:self.state.docId]];
-    NSString* bookmarkImageName = [[LocalProviderUtil bookmark:self.state.docId] containsObject:[BookmarkInfo info:AT_AS(toSpread, self.state.page, NSNumber).intValue comment:nil]] ? @"button_bookmark_on" : @"button_bookmark_off";
-    [self.toggleBookmarkButton setImage:[UIImage imageNamed:bookmarkImageName] forState:UIControlStateNormal];
-}
-
-- (IBAction)thumbnailPageSliderChanged {
-    int cover = floor(self.thumbnailPageSlider.value + 0.5);
-    
-    if (cover != self.thumbnailFlowCoverView.offset) {
-        self.thumbnailFlowCoverView.offset = cover;
-        [self.thumbnailFlowCoverView draw];
-        
-        [self setThumbnailLabels:[self thumbnailLeftOriginPosition:cover]];
-    }
 }
 
 #pragma mark ConfigProvider Nofitifaction
@@ -832,7 +864,7 @@
     if ([self.state.docId compare:docId] != NSOrderedSame) {
         return;
     }
-
+    
     NSDictionary* dic = notification.userInfo;
     int page = FOR_I(dic, @"page");
     int level = FOR_I(dic, @"level");
@@ -848,6 +880,20 @@
     });
 }
 
+- (void)onDownloaderAnnotationProgress:(NSNotification *)notification {
+    NSString* docId = notification.object;
+    
+    if ([self.state.docId compare:docId] != NSOrderedSame) {
+        return;
+    }
+    
+    // TODO page aware
+    // NSDictionary* dic = notification.userInfo;
+    // int page = FOR_I(dic, @"page");
+
+    [self.state loadOverlay];
+}
+
 #pragma mark GestureRecognizerDelegate
 
 - (void)onScale:(float)scale focus:(CGPoint)focus {
@@ -859,7 +905,9 @@
 }
 
 - (void)onSingleTap:(CGPoint)point {
-    if (point.y < self.view.bounds.size.height / 5) {
+    NSLog(@"singleTap: %@", NSStringFromCGPoint(point));
+    
+    if ([self.state tap:[self convertCGPoint:point]]) {
         [UIView animateWithDuration:0.2 animations:^{
             self.menuView.alpha = 1;
         }];
@@ -873,8 +921,6 @@
         self.thumbnailPageSlider.value = [self thumbnailLeftOriginPosition:self.state.page];
         
         [self setThumbnailLabels:self.state.page];
-    } else {
-        [self.state tap:[self convertCGPoint:point]];
     }
 }
 
@@ -1019,6 +1065,40 @@
     [self refreshPageLoadingView];
     
     [LocalProviderUtil setLastOpenedPage:self.state.docId page:page];
+}
+
+#pragma mark MoviePresenter
+
+- (void)showMovie:(ImageAnnotationInfo *)info {
+    self.moviePlayer = [[[MPMoviePlayerController alloc] initWithContentURL:[NSURL URLWithString:((MovieAnnotationInfo *)info.annotation).target]] autorelease];
+    
+    self.moviePlayer.view.frame = [self invertCGRect:info.frame];
+    [self.view addSubview:self.moviePlayer.view];
+    
+    [self.moviePlayer setFullscreen:YES animated:TRUE];
+    [self.moviePlayer play];
+    
+    self.orientationOnEnterMovie = [UIApplication sharedApplication].statusBarOrientation;
+}
+
+#pragma mark MPMoviePlayerController notification
+
+- (void)onMoviePlayerWillExitFullscreen:(NSNotification *)notification {
+    UIInterfaceOrientation o = [UIApplication sharedApplication].statusBarOrientation;
+    
+    if (UIInterfaceOrientationIsPortrait(o) != UIInterfaceOrientationIsPortrait(self.orientationOnEnterMovie)) {
+        [self willRotateToInterfaceOrientation:o duration:0];
+        [self didRotateFromInterfaceOrientation:self.orientationOnEnterMovie];
+    }
+}
+
+- (void)onMoviePlayerDidExitFullscreen:(NSNotification *)notification {
+    [self.moviePlayer.view removeFromSuperview];
+    [self.moviePlayer stop];
+}
+
+- (void)onMoviePlayerPlaybackDidFinish:(NSNotification *)notification {
+    self.moviePlayer = nil;
 }
 
 #pragma mark UIAlertViewDelegate
@@ -1223,6 +1303,41 @@
 
 - (void)keyboardWillHide:(NSNotification *)notification {
     CGRectSetHeight(self.bookmarkTableView.frame, self.bookmarkView.frame.size.height);
+}
+
+#import <mach/mach.h>
+#import <mach/mach_host.h>
+
+- (natural_t)get_free_memory {
+    mach_port_t host_port;
+    mach_msg_type_number_t host_size;
+    vm_size_t pagesize;
+    host_port = mach_host_self();
+    host_size = sizeof(vm_statistics_data_t) / sizeof(integer_t);
+    host_page_size(host_port, &pagesize);
+    vm_statistics_data_t vm_stat;
+    if (host_statistics(host_port, HOST_VM_INFO, (host_info_t)&vm_stat, &host_size) != KERN_SUCCESS) {
+        NSLog(@"Failed to fetch vm statistics");
+        return 0;
+    }
+    
+    natural_t mem_free = vm_stat.free_count * pagesize;
+    return mem_free;
+}
+
+- (u_int)get_resident_size {
+    struct task_basic_info t_info;
+    mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
+    
+    if (task_info(current_task(), TASK_BASIC_INFO, (task_info_t)&t_info, &t_info_count)!= KERN_SUCCESS)
+    {
+        NSLog(@"%s(): Error in task_info(): %s",
+              __FUNCTION__, strerror(errno));
+    }
+    
+    u_int rss = t_info.resident_size;
+    
+    return rss;
 }
 
 @end

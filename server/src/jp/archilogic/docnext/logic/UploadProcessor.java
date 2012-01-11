@@ -21,6 +21,7 @@ import jp.archilogic.docnext.exception.EncryptedPDFException;
 import jp.archilogic.docnext.exception.MalformedPDFException;
 import jp.archilogic.docnext.exception.UnsupportedFormatException;
 import jp.archilogic.docnext.logic.ImageGenerator.PDFInfo;
+import jp.archilogic.docnext.logic.PDFAnnotationParser.PageAnnotationInfo;
 import jp.archilogic.docnext.logic.PDFTextParser.PageTextInfo;
 import jp.archilogic.docnext.logic.PersistManager.ImageJson;
 import jp.archilogic.docnext.logic.PersistManager.InfoJson;
@@ -67,11 +68,13 @@ public class UploadProcessor {
         private final String tempPath;
         private final Document doc;
         private final boolean isWebp;
+        private final int pageLimit;
 
-        public UploadTask( final String tempPath , final Document doc , final boolean isWebp ) {
+        public UploadTask( final String tempPath , final Document doc , final boolean isWebp , final int pageLimit ) {
             this.tempPath = tempPath;
             this.doc = doc;
             this.isWebp = isWebp;
+            this.pageLimit = pageLimit;
         }
 
         private Size getSize( final InputStream is ) throws IOException {
@@ -150,6 +153,7 @@ public class UploadProcessor {
 
             Collections.sort( paths );
 
+            // old size detection
             Size target = null;
 
             if ( paths.size() > N_SKIP * 2 ) {
@@ -178,6 +182,8 @@ public class UploadProcessor {
                 IOUtils.closeQuietly( out );
 
                 imageGenerator.createFromImage( tmpPath , doc.id , page , false , target.width , target.height , page == 0 , isWebp );
+
+                persistManager.writeImageAnnotationJson( doc.id , page , Lists.< PageAnnotationInfo > newArrayList() );
 
                 page++;
             }
@@ -215,6 +221,13 @@ public class UploadProcessor {
             }
 
             LOGGER.info( "checkCanParse done" );
+
+            {
+                int page = 0;
+                for ( final List< PageAnnotationInfo > anno : pdfAnnotationParser.parse( tempPdfPath ) ) {
+                    persistManager.writeImageAnnotationJson( doc.id , page++ , anno );
+                }
+            }
 
             final String cleanedPath = FilenameUtils.getFullPathNoEndSeparator( tempPdfPath ) + File.separator + "cleaned" + doc.id + ".pdf";
             pdfAnnotationParser.clean( tempPdfPath , cleanedPath );
@@ -319,11 +332,11 @@ public class UploadProcessor {
     @Autowired
     private ProgressManager progressManager;
 
-    public void proc( final String tempPath , final Document doc ) {
-        taskExecutor.execute( new UploadTask( tempPath , doc , false ) );
+    public void proc( final String tempPath , final Document doc , final int pageLimit ) {
+        taskExecutor.execute( new UploadTask( tempPath , doc , false , pageLimit ) );
     }
 
-    public void procSync( final String tempPath , final Document doc , final boolean isWebp ) {
-        new UploadTask( tempPath , doc , isWebp ).run();
+    public void procSync( final String tempPath , final Document doc , final boolean isWebp , final int pageLimit ) {
+        new UploadTask( tempPath , doc , isWebp , pageLimit ).run();
     }
 }

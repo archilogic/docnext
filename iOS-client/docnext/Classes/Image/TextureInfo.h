@@ -21,7 +21,7 @@
 + (TextureInfo *)infoWithSize:(CGSize)size;
 + (TextureInfo *)infoWithColor:(float)r g:(float)g b:(float)b alpha:(float)alpha;
 + (TextureInfo *)infoWithTiledImage:(UIImage *)image size:(CGSize)size;
-- (void)bindTexture:(GLubyte *)data imageSize:(CGSize)imageSize;
+- (void)bindTexture:(GLubyte *)data imageSize:(CGSize)imageSize use565:(BOOL)use565;
 - (void)resetTexture;
 
 @end

@@ -6,3 +6,5 @@
 /repository
 /native/dnconv
 /config/config.*.properties
+build
+/config/scm.properties

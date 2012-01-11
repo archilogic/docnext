@@ -92,16 +92,12 @@
     CGContextDrawImage(ctx, CGRectMake(0, 0, TEXTURE_SIZE, TEXTURE_SIZE), imageRef);
     CGContextRelease(ctx);
     
-#ifdef USE565
     GLubyte* rgb = malloc(TEXTURE_SIZE * TEXTURE_SIZE * 2);
     
     [BitmapConverter fromRGBA8888toRGB656:data to:rgb size:TEXTURE_SIZE * TEXTURE_SIZE];
     free(data);
     
     return rgb;
-#else
-    return data;
-#endif
 }
 
 - (GLubyte *)loadWebp {
@@ -126,7 +122,6 @@
         assert(0);
     }
     
-#ifdef USE565
     GLubyte* rgb = malloc(TEXTURE_SIZE * TEXTURE_SIZE * 2);
     
     [BitmapConverter changeShortEndian:config.output.u.RGBA.rgba to:rgb size:TEXTURE_SIZE * TEXTURE_SIZE];
@@ -134,9 +129,6 @@
     WebPFreeDecBuffer(&config.output);
     
     return rgb;
-#else
-    return config.output.u.RGBA.rgba;
-#endif
 }
 
 - (void)main {

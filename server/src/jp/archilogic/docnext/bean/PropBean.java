@@ -34,4 +34,13 @@ public class PropBean {
 
     @Value( "${path.batchCompleteDir}" )
     public String batchCompleteDir;
+
+    @Value( "${commit.hash}" )
+    public String gitCommitHash;
+
+    @Value( "${commit.date}" )
+    public long gitCommitDate;
+
+    @Value( "${version}" )
+    public String version;
 }

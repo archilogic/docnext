@@ -15,6 +15,7 @@
 
 #define DOWNLOADER_IMAGE_INIT_DOWNLOADED @"docnext_downloader_image_init_downloaded"
 #define DOWNLOADER_TEXTURE_PROGRESS @"docnext_downloader_texture_progress"
+#define DOWNLOADER_ANNOTATION_PROGRESS @"docnext_downloader_annotation_progress"
 
 @interface Downloader : NSObject
 

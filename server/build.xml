@@ -3,7 +3,9 @@
     <property name="output" value="build" />
     <property name="classes" value="${output}/WEB-INF/classes" />
 
-	<target name="production">
+    <taskdef name="gitversiontask" classname="jp.archilogic.ant.git_version_task.GitVersionTask" classpath="./lib-ant/GitVersionTask.jar" />
+
+    <target name="production">
         <delete dir="${output}" />
 
         <copy todir="${output}">
@@ -12,6 +14,10 @@
 
         <mkdir dir="${classes}" />
 
+        <gitversiontask destination="config/scm.properties" />
+        <copy file="config/scm.properties" tofile="${classes}/scm.properties" />
+
+        <copy file="config/version.properties" tofile="${classes}/version.properties" />
         <copy file="config/config.tomcat6.properties" tofile="${classes}/config.tomcat6.properties" />
         <copy todir="${classes}">
             <fileset dir="config" includes="*.xml" />
@@ -24,5 +30,30 @@
         </javac>
 
         <jar basedir="${output}" jarfile="${output}/docnext.war" />
+    </target>
+
+    <target name="export">
+        <delete dir="${output}" />
+
+        <gitversiontask destination="config/scm.properties" />
+
+        <copy todir="${output}/config">
+            <fileset dir="config" />
+        </copy>
+        <copy todir="${output}/lib-ant">
+            <fileset dir="lib-ant" />
+        </copy>
+        <copy todir="${output}/native">
+            <fileset dir="native" />
+        </copy>
+        <copy todir="${output}/src">
+            <fileset dir="src" />
+        </copy>
+        <copy todir="${output}/war">
+            <fileset dir="war" />
+        </copy>
+        <copy file="build.xml" tofile="${output}/build.xml" />
+        
+        <zip destfile="${output}/docnext-server.zip" basedir="${output}" />
     </target>
 </project>

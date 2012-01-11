@@ -9,11 +9,13 @@
 #import <Foundation/Foundation.h>
 #import "DownloaderItem.h"
 
+@class Downloader;
+
 @interface DownloaderState : NSObject
 
 @property(nonatomic, retain) DownloaderItem* item;
 
-+ (DownloaderState *)stateWithItem:(DownloaderItem *)item lock:(NSLock *)lock;
++ (DownloaderState *)stateWithItem:(DownloaderItem *)item lock:(NSLock *)lock delegate:(Downloader *)delegate;
 - (void)invoke;
 - (BOOL)didFinished;
 - (void)stop;

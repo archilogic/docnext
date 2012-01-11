@@ -16,6 +16,7 @@
 #import "ImageLevelUtil.h"
 #import "Utilities.h"
 #import "DownloaderState.h"
+#import "UIStringTagAlertView.h"
 
 #define WORKING_SIZE 2
 
@@ -145,6 +146,18 @@ static Downloader* _instance = nil;
             continue;
         }
         
+        if (state.item.suspend) {
+            [self.states removeObjectAtIndex:index];
+            [self findItemByDocId:queue docId:state.item.docId].suspend = YES;
+            
+            [state release];
+            
+            [NSKeyedArchiver archiveRootObject:queue toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+            
+            index--;
+            continue;
+        }
+        
         [state invoke];
         [state release];
     }
@@ -159,7 +172,7 @@ static Downloader* _instance = nil;
             continue;
         }
         
-        [self.states addObject:[DownloaderState stateWithItem:item lock:self.lock]];
+        [self.states addObject:[DownloaderState stateWithItem:item lock:self.lock delegate:self]];
     }
 }
 
@@ -193,10 +206,6 @@ static Downloader* _instance = nil;
     }
     
     return _instance;
-}
-
-- (void)debug:(NSTimer *)timer {
-    [self stop];
 }
 
 - (void)start {
@@ -249,6 +258,14 @@ static Downloader* _instance = nil;
     
     for (DownloaderItem* item in queue) {
         if ([item.docId isEqual:docId]) {
+            if (item.suspend) {
+                item.suspend = NO;
+
+                [NSKeyedArchiver archiveRootObject:queue toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+                
+                [self start];
+            }
+            
             [self.lock unlock];
             
             NSLog(@"requested docuemnt is already in queue");
@@ -374,6 +391,21 @@ static Downloader* _instance = nil;
     
     [self stop];
     [self start];
+}
+
+#pragma mark UIAlertViewDelegate
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (![alertView isKindOfClass:[UIStringTagAlertView class]]) {
+        assert(0);
+    }
+    
+    if (buttonIndex == alertView.cancelButtonIndex) {
+        return;
+    }
+    
+    NSString* docId = ((UIStringTagAlertView *)alertView).stringTag;
+    [self resumeItem:docId];
 }
 
 @end

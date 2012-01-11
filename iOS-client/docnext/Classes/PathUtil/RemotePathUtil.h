@@ -11,6 +11,7 @@
 @interface RemotePathUtil : NSObject
 
 + (NSString *)imageDir:(NSString *)endpoint;
++ (NSString *)imageAnnotationPath:(NSString *)endpoint page:(int)page;
 + (NSString *)imageInfoPath:(NSString *)endpoint;
 + (NSString *)imageRegionsPath:(NSString *)endpoint page:(int)page;
 + (NSString *)imageTextIndexPath:(NSString *)endpoint;

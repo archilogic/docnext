@@ -54,11 +54,11 @@
     return self;
 }
 
-- (id)initWithData:(CGSize)p_size data:(GLubyte *)data imageSize:(CGSize)imageSize {
+- (id)initWithData:(CGSize)p_size data:(GLubyte *)data imageSize:(CGSize)imageSize use565:(BOOL)use565 {
     self = [self initWithSize:p_size];
     
     if (self) {
-        [self bindTexture:data imageSize:imageSize];
+        [self bindTexture:data imageSize:imageSize use565:use565];
     }
     
     return self;
@@ -75,16 +75,18 @@
     
     GLubyte* data = (GLubyte *)malloc(size.width * size.height * 4);
     
+    bzero(data, size.width * size.height * 4);
+    
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     CGContextRef ctx = CGBitmapContextCreate(data, size.width, size.height, 8, size.width * 4, colorSpace, kCGImageAlphaPremultipliedLast);
-    CGColorSpaceRelease(colorSpace);
 
     CGContextSetRGBFillColor(ctx, r, g, b, alpha);
     CGContextFillRect(ctx, CGRectMake(0, 0, size.width, size.height));
-
+    
+    CGColorSpaceRelease(colorSpace);
     CGContextRelease(ctx);
     
-    TextureInfo* info = [[[TextureInfo alloc] initWithData:size data:data imageSize:size] autorelease];
+    TextureInfo* info = [[[TextureInfo alloc] initWithData:size data:data imageSize:size use565:NO] autorelease];
     
     free(data);
     
@@ -111,7 +113,6 @@
     
     CGContextRelease(ctx);
 
-#ifdef USE565
     GLubyte* rgb = malloc(imageSize.width * imageSize.height * 2);
     bzero(rgb, imageSize.width * imageSize.height * 2);
     
@@ -119,20 +120,15 @@
     
     free(data);
     
-    TextureInfo* info = [[[TextureInfo alloc] initWithData:size data:rgb imageSize:imageSize] autorelease];
+    TextureInfo* info = [[[TextureInfo alloc] initWithData:size data:rgb imageSize:imageSize use565:YES] autorelease];
     
     free(rgb);
-#else
-    TextureInfo* info = [[[TextureInfo alloc] initWithData:size data:data imageSize:imageSize lock:lock] autorelease];
-    
-    free(data);
-#endif
     
     return info;
 }
 
 // Crop is keeping left and top edge
-- (void)bindTexture:(GLubyte *)data imageSize:(CGSize)imageSize {
+- (void)bindTexture:(GLubyte *)data imageSize:(CGSize)imageSize use565:(BOOL)use565 {
 	glBindTexture(GL_TEXTURE_2D, self.texId);
     
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -140,11 +136,11 @@
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     
-#ifdef USE565
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageSize.width, imageSize.height, 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, data);
-#else
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageSize.width, imageSize.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-#endif
+    if (use565) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageSize.width, imageSize.height, 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, data);
+    } else {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageSize.width, imageSize.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    }
     
     GLint rect[] = {0, self.size.height, self.size.width, -self.size.height};
     glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_CROP_RECT_OES, rect);

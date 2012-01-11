@@ -14,6 +14,10 @@ public class RepositoryPathManager {
         return String.format( "%s/public/document/" , prop.repository );
     }
 
+    public String getImageAnnotationPath( final long id , final int page ) {
+        return String.format( "%s%d.anno.json" , getImageDirPath( id ) , page );
+    }
+
     public String getImageDirPath( final long id ) {
         return String.format( "%s/public/document/%d/image/" , prop.repository , id );
     }

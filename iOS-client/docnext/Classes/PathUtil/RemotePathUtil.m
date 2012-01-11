@@ -12,6 +12,10 @@
 
 #pragma mark public
 
++ (NSString *)imageAnnotationPath:(NSString *)endpoint page:(int)page {
+    return [NSString stringWithFormat:@"%@%d.anno.json", [RemotePathUtil imageDir:endpoint], page];
+}
+
 + (NSString *)imageDir:(NSString *)endpoint {
     return [NSString stringWithFormat:@"%@image/", endpoint];
 }

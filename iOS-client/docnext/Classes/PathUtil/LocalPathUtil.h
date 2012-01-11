@@ -15,6 +15,7 @@
 + (void)ensureImageDir:(NSString *)docId;
 + (NSString *)completedPath:(NSString *)docId;
 + (NSString *)docDir:(NSString *)docId;
++ (NSString *)imageAnnotationPath:(NSString *)docId page:(int)page;
 + (NSString *)imageDir:(NSString *)docId;
 + (NSString *)imageInfoPath:(NSString *)docId;
 + (NSString *)imageInitDownloadedPath:(NSString *)docId;

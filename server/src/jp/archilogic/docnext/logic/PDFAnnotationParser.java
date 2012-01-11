@@ -144,7 +144,7 @@ public class PDFAnnotationParser {
                 } else if ( action instanceof PDActionURI ) {
                     ret.add( new PageAnnotationInfo( convertToRegion( anno , page ) , new URIAction( ( ( PDActionURI ) action ).getURI() ) ) );
                 } else {
-                    LOGGER.info( "Unsupported PDActionGoto: " + nsGetClassName( action ) );
+                    LOGGER.info( "Unsupported PDAction: " + nsGetClassName( action ) );
                 }
             } else {
                 LOGGER.info( "Unsupported PDAnnotation: " + nsGetClassName( anno ) );

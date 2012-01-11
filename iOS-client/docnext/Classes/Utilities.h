@@ -6,7 +6,6 @@
 //  Copyright 2011 Archilogic. All rights reserved.
 //
 
-#define USE565
 #define REDUCE_TEXTURE
 
 #define AT(arr,i) ([(arr) objectAtIndex:(i)])

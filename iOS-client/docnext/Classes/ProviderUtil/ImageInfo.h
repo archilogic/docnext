@@ -20,6 +20,7 @@
 @property(nonatomic) BOOL isWebp;
 @property(nonatomic) BOOL hasConcatFile;
 @property(nonatomic, retain) NSArray* spreadOnlyPages;
+@property(nonatomic) BOOL hasAnnotation;
 
 + (ImageInfo *)infoWithDictionary:(NSDictionary *)dict;
 

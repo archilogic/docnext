@@ -76,14 +76,14 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/org.springframework.transaction-3.0.5.RELEASE.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/org.springframework.web-3.0.5.RELEASE.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/org.springframework.web.servlet-3.0.5.RELEASE.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/fontbox-1.5.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/guava-r09.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/jempbox-1.5.0.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/pdfbox-1.5.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/lucene-analyzers-3.1.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/lucene-core-3.1.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/lucene-highlighter-3.1.0.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jericho-html-3.2.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-io-2.0.1.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/fontbox-1.6.0.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jempbox-1.6.0.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/pdfbox-1.6.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

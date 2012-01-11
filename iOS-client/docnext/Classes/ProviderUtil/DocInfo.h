@@ -22,6 +22,7 @@
 @property(nonatomic, retain) NSString* publisher;
 @property(nonatomic) ProviderBindingType binding;
 @property(nonatomic) ProviderFlowDirectionType flow;
+@property(nonatomic) int version;
 
 + (DocInfo *)infoWithDictionary:(NSDictionary *)dict;
 

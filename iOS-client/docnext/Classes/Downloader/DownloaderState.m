@@ -16,6 +16,8 @@
 #import "ImageLevelUtil.h"
 #import "Utilities.h"
 #import "TexturePosition.h"
+#import "Reachability.h"
+#import "UIStringTagAlertView.h"
 
 #define THUMBNAIL_BLOCK 16
 
@@ -26,6 +28,7 @@
 @property(nonatomic) BOOL running;
 @property(atomic) BOOL shouldStop;
 @property(atomic) BOOL working;
+@property(nonatomic, assign) Downloader* delegate;
 
 - (float)calcProgress;
 
@@ -40,8 +43,9 @@
 @synthesize running;
 @synthesize shouldStop;
 @synthesize working;
+@synthesize delegate;
 
-- (id)initWithItem:(DownloaderItem *)p_item lock:(NSLock *)p_lock {
+- (id)initWithItem:(DownloaderItem *)p_item lock:(NSLock *)p_lock delegate:(Downloader *)p_delegate {
     self = [super init];
     
     if (self) {
@@ -51,6 +55,7 @@
         self.running = YES;
         self.shouldStop = NO;
         self.working = NO;
+        self.delegate = p_delegate;
     }
     
     return self;
@@ -60,6 +65,7 @@
     self.item = nil;
     self.lock = nil;
     self.req = nil;
+    self.delegate = nil;
     
     [super dealloc];
 }
@@ -88,21 +94,71 @@
     self.item.sequence++;
 }
 
-- (void)download:(NSString *)remotePath localPath:(NSString *)localPath complete:(void (^)(void))complete {
+- (void)waitAndRetry {
+    [NSThread sleepForTimeInterval:3];
+    
+    if (![Reachability reachabilityForInternetConnection].isReachable) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"error_dialog_title", @"") message:NSLocalizedString(@"network_unavailable_error_dialog_message", @"") delegate:nil cancelButtonTitle:NSLocalizedString(@"ok", @"") otherButtonTitles:nil] autorelease] show];
+        });
+        
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_FAILED object:self.item.docId];
+    } else {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIStringTagAlertView* alert = [[[UIStringTagAlertView alloc] initWithTitle:NSLocalizedString(@"confirm_dialog_title", @"") message:NSLocalizedString(@"retry_download_confirm_dialog_message", @"") delegate:self.delegate cancelButtonTitle:NSLocalizedString(@"cancel", @"") otherButtonTitles:NSLocalizedString(@"ok", @""), nil] autorelease];
+            alert.stringTag = self.item.docId;
+            
+            [alert show];
+        });
+    }
+    
+    self.item.suspend = YES;
+}
+
+- (void)downloadInternal:(NSString *)remotePath urlRef:(NSURL **)urlRef tempRef:(NSString **)tempRef {
+    if (![Reachability reachabilityForInternetConnection].isReachable) {
+        [self waitAndRetry];
+        return;
+    }
+    
     NSURL *url = [NSURL URLWithString:remotePath];
     
-    NSString* temp = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"%f", [NSDate timeIntervalSinceReferenceDate]]];
+    NSString* temp = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"temp%f", [NSDate timeIntervalSinceReferenceDate]]];
     
     __block ASIHTTPRequest *request = [ASIHTTPRequest requestWithURL:url];
     self.req = request;
     
+    request.timeOutSeconds = 20;
     request.downloadDestinationPath = temp;
-
+    
     request.failedBlock = ^{
         NSLog(@"Request Failed: url: %@, %@", remotePath, request.error.localizedDescription);
     };
     
     [request startSynchronous];
+
+    int sc = request.responseStatusCode;
+    if (sc != 200 || request.error) {
+        NSLog(@"statusCode: %d, error: %@, url: %@", sc, request.error, remotePath);
+        
+        [self waitAndRetry];
+
+        return;
+    }
+
+    *urlRef = url;
+    *tempRef = temp;
+}
+
+- (void)download:(NSString *)remotePath localPath:(NSString *)localPath complete:(void (^)(void))complete {
+    NSURL *url = nil;
+    NSString *temp = nil;
+    
+    [self downloadInternal:remotePath urlRef:&url tempRef:&temp];
+    
+    if (!url) {
+        return;
+    }
     
     NSString *dir = [localPath substringToIndex:[localPath rangeOfString:@"/" options:NSBackwardsSearch].location];
     [FileUtil ensureDir:dir];
@@ -115,22 +171,16 @@
 }
 
 - (void)downloadConcat:(NSString *)remotePath localPaths:(NSArray *)localPaths progress:(void (^)(int))progress complete:(void (^)(void))complete {
-    NSURL *url = [NSURL URLWithString:remotePath];
+    NSURL *url = nil;
+    NSString *temp = nil;
     
-    NSString* temp = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"temp%f", [NSDate timeIntervalSinceReferenceDate]]];
+    [self downloadInternal:remotePath urlRef:&url tempRef:&temp];
     
-    __block ASIHTTPRequest *request = [ASIHTTPRequest requestWithURL:url];
-    self.req = request;
+    if (!url) {
+        return;
+    }
     
-    request.downloadDestinationPath = temp;
-    
-    request.failedBlock = ^{
-        NSLog(@"Request Failed: url: %@, %@", remotePath, request.error.localizedDescription);
-    };
-    
-    
-    [request startSynchronous];
-    
+
     // TODO very simple implementation. need to modify (to use ASIHTTPRequest#didDataReceived or something like) if performance problem occurs.
 
     int offset = 0;
@@ -439,6 +489,39 @@
     }
 }
 
+- (void)ensureImageAnnotation:(int)page {
+    if (self.shouldStop) {
+        return;
+    }
+    
+    ImageInfo* image = [LocalProviderUtil imageInfo:self.item.docId];
+    
+    if (!image.hasAnnotation) {
+        [[@"[]" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:[FileUtil fullPath:[LocalPathUtil imageAnnotationPath:self.item.docId page:page]] atomically:YES];
+        
+        [self proceedSequence];
+        return;
+    }
+    
+    if ([FileUtil exists:[LocalPathUtil imageAnnotationPath:self.item.docId page:page]]){
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+        
+        [self proceedSequence];
+        return;
+    }
+    
+    [self download:[RemotePathUtil imageAnnotationPath:self.item.endpoint page:page] localPath:[LocalPathUtil imageAnnotationPath:self.item.docId page:page] complete:^{
+        if (self.shouldStop) {
+            return;
+        }
+        
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_ANNOTATION_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_I(page), @"page", nil]];
+        
+        [self proceedSequence];
+    }];
+}
+
 - (void)ensureImageInfo {
     if ([FileUtil exists:[LocalPathUtil imageInfoPath:self.item.docId]]){
         [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
@@ -505,6 +588,17 @@
     return inv;
 }
 
+- (NSInvocation *)ensureImageAnnotationInvocation:(int)page {
+    SEL sel = @selector(ensureImageAnnotation:);
+    
+    NSInvocation* inv = [NSInvocation invocationWithMethodSignature:[self methodSignatureForSelector:sel]];
+    [inv setTarget:self];
+    [inv setSelector:sel];
+    [inv setArgument:&page atIndex:2];
+    
+    return inv;
+}
+
 - (NSInvocation *)ensureImageThumbnailInvocation:(int)page {
     SEL sel = @selector(ensureImageThumbnail:);
     
@@ -557,7 +651,7 @@
         
         int perPage = [self calcPerPage:image minLevel:minLevel maxLevel:maxLevel];
         
-        return 1.0 * value / (perPage * doc.pages + doc.pages);
+        return 1.0 * value / (perPage * doc.pages + doc.pages + doc.pages);
     }
     
     assert(0);
@@ -569,11 +663,18 @@
     int minLevel = [ImageLevelUtil minLevel:image.maxLevel];
     int maxLevel = [ImageLevelUtil maxLevel:minLevel imageMaxLevel:image.maxLevel imageMaxNumberOfLevel:image.maxNumberOfLevel];
     
-    int perPage = [self calcPerPage:image minLevel:minLevel maxLevel:maxLevel];
+    // 1 for annotation
+    int perPage = 1 + [self calcPerPage:image minLevel:minLevel maxLevel:maxLevel];
     
     if (value < doc.pages * perPage) {
         int page = value / perPage;
         value %= perPage;
+        
+        if (value < 1) {
+            return [self ensureImageAnnotationInvocation:page];
+        }
+        
+        value--;
         
         for (int level = minLevel; level <= maxLevel; level++) {
             int nx;
@@ -643,8 +744,8 @@
 
 #pragma mark public
 
-+ (DownloaderState *)stateWithItem:(DownloaderItem *)item lock:(NSLock *)lock {
-    return [[[DownloaderState alloc] initWithItem:item lock:lock] autorelease];
++ (DownloaderState *)stateWithItem:(DownloaderItem *)item lock:(NSLock *)lock delegate:(id)delegate {
+    return [[[DownloaderState alloc] initWithItem:item lock:lock delegate:delegate] autorelease];
 }
 
 - (void)invoke {

@@ -79,6 +79,7 @@
             [self checkDocInfo];
         } else {
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onDownloaderProgress:) name:DOWNLOADER_PROGRESS object:nil];
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onDownloaderFailed:) name:DOWNLOADER_FAILED object:nil];
         }
     }
 }
@@ -108,11 +109,27 @@
     }
     
     [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_PROGRESS object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_FAILED object:nil];
     
     dispatch_async(dispatch_get_main_queue(), ^{
         [self checkDocInfo];
     });
 }
+
+- (void)onDownloaderFailed:(NSNotification *)notification {
+    if ([self.docId compare:notification.object] != NSOrderedSame) {
+        return;
+    }
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_FAILED object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_PROGRESS object:nil];
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UINavigationController* nav = self.navigationController;
+        [nav popViewControllerAnimated:YES];
+    });
+}
+
 - (void)onDownloaderComplete:(NSNotification *)notification {
     if ([self.docId compare:notification.object] != NSOrderedSame) {
         return;

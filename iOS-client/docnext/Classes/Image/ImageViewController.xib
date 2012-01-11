@@ -956,7 +956,7 @@
 						<string key="NSFrameSize">{320, 480}</string>
 						<reference key="NSSuperview" ref="191373211"/>
 						<reference key="NSWindow"/>
-						<reference key="NSNextKeyView"/>
+						<reference key="NSNextKeyView" ref="868840962"/>
 						<object class="NSColor" key="IBUIBackgroundColor">
 							<int key="NSColorSpace">1</int>
 							<bytes key="NSRGB">MC4wMDM5MjE1Njg2MjcgMC4wMDM5MjE1Njg2MjcgMC4wMDM5MjE1Njg2MjcAA</bytes>
@@ -964,6 +964,31 @@
 						<float key="IBUIAlpha">0.0</float>
 						<bool key="IBUIUserInteractionEnabled">NO</bool>
 						<string key="targetRuntimeIdentifier">IBCocoaTouchFramework</string>
+					</object>
+					<object class="IBUILabel" id="868840962">
+						<reference key="NSNextResponder" ref="191373211"/>
+						<int key="NSvFlags">-2147483356</int>
+						<string key="NSFrame">{{10, 10}, {460, 21}}</string>
+						<reference key="NSSuperview" ref="191373211"/>
+						<reference key="NSWindow"/>
+						<object class="NSColor" key="IBUIBackgroundColor">
+							<int key="NSColorSpace">1</int>
+							<bytes key="NSRGB">MCAwIDAAA</bytes>
+						</object>
+						<bool key="IBUIOpaque">NO</bool>
+						<bool key="IBUIClipsSubviews">YES</bool>
+						<float key="IBUIAlpha">0.80000001192092896</float>
+						<int key="IBUIContentMode">7</int>
+						<bool key="IBUIUserInteractionEnabled">NO</bool>
+						<string key="targetRuntimeIdentifier">IBCocoaTouchFramework</string>
+						<string key="IBUIText">memory usage</string>
+						<reference key="IBUITextColor" ref="52788711"/>
+						<nil key="IBUIHighlightedColor"/>
+						<int key="IBUIBaselineAdjustment">1</int>
+						<float key="IBUIMinimumFontSize">10</float>
+						<bool key="IBUIEnabled">NO</bool>
+						<reference key="IBUIFontDescription" ref="53955975"/>
+						<reference key="IBUIFont" ref="841124037"/>
 					</object>
 				</object>
 				<string key="NSFrameSize">{320, 480}</string>
@@ -1225,6 +1250,14 @@
 					<int key="connectionID">133</int>
 				</object>
 				<object class="IBConnectionRecord">
+					<object class="IBCocoaTouchOutletConnection" key="connection">
+						<string key="label">memoryView</string>
+						<reference key="source" ref="372490531"/>
+						<reference key="destination" ref="868840962"/>
+					</object>
+					<int key="connectionID">202</int>
+				</object>
+				<object class="IBConnectionRecord">
 					<object class="IBCocoaTouchEventConnection" key="connection">
 						<string key="label">hideMenuClick</string>
 						<reference key="source" ref="109092013"/>
@@ -1418,6 +1451,7 @@
 							<reference ref="1025883654"/>
 							<reference ref="1023742530"/>
 							<reference ref="767745544"/>
+							<reference ref="868840962"/>
 						</object>
 						<reference key="parent" ref="0"/>
 					</object>
@@ -1760,6 +1794,11 @@
 						<reference key="object" ref="557658814"/>
 						<reference key="parent" ref="546372047"/>
 					</object>
+					<object class="IBObjectRecord">
+						<int key="objectID">201</int>
+						<reference key="object" ref="868840962"/>
+						<reference key="parent" ref="191373211"/>
+					</object>
 				</object>
 			</object>
 			<object class="NSMutableDictionary" key="flattenedProperties">
@@ -1796,6 +1835,7 @@
 					<string>196.IBPluginDependency</string>
 					<string>197.IBPluginDependency</string>
 					<string>198.IBPluginDependency</string>
+					<string>201.IBPluginDependency</string>
 					<string>25.IBPluginDependency</string>
 					<string>27.IBPluginDependency</string>
 					<string>36.IBPluginDependency</string>
@@ -1864,6 +1904,7 @@
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
+					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>GestureRecognizerView</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
 					<string>com.apple.InterfaceBuilder.IBCocoaTouchPlugin</string>
@@ -1905,7 +1946,7 @@
 				<reference key="dict.values" ref="0"/>
 			</object>
 			<nil key="sourceID"/>
-			<int key="maxID">200</int>
+			<int key="maxID">202</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<object class="NSMutableArray" key="referencedPartialClassDescriptions">
@@ -2078,6 +2119,7 @@
 							<string>configView</string>
 							<string>gestureRecognizerView</string>
 							<string>hideMenuButton</string>
+							<string>memoryView</string>
 							<string>menuButtonsView</string>
 							<string>menuLabelsView</string>
 							<string>menuView</string>
@@ -2111,6 +2153,7 @@
 							<string>UIView</string>
 							<string>GestureRecognizerView</string>
 							<string>UIButton</string>
+							<string>UILabel</string>
 							<string>UIView</string>
 							<string>UIView</string>
 							<string>UIView</string>
@@ -2147,6 +2190,7 @@
 							<string>configView</string>
 							<string>gestureRecognizerView</string>
 							<string>hideMenuButton</string>
+							<string>memoryView</string>
 							<string>menuButtonsView</string>
 							<string>menuLabelsView</string>
 							<string>menuView</string>
@@ -2209,6 +2253,10 @@
 							<object class="IBToOneOutletInfo">
 								<string key="name">hideMenuButton</string>
 								<string key="candidateClassName">UIButton</string>
+							</object>
+							<object class="IBToOneOutletInfo">
+								<string key="name">memoryView</string>
+								<string key="candidateClassName">UILabel</string>
 							</object>
 							<object class="IBToOneOutletInfo">
 								<string key="name">menuButtonsView</string>

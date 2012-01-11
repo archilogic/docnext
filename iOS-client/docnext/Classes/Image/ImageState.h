@@ -32,10 +32,12 @@
 @property(nonatomic) CGSize surfaceSize;
 @property(nonatomic) ImageDirection direction;
 @property(nonatomic) BOOL isInteracting;
-@property(nonatomic, retain) NSMutableArray* highlights;
+@property(nonatomic, retain) NSArray* overlay;
 @property(nonatomic, retain) NSSet* spreadFirstPages;
 @property(nonatomic, assign) id<PageLoader> loader;
 @property(nonatomic, assign) id<PageChangeListener> pageChangeListener;
+@property(nonatomic, assign) id<PageChanger> pageChanger;
+@property(nonatomic, assign) id<MoviePresenter> moviePresenter;
 
 - (void)doubleTap:(CGPoint)point;
 - (void)drag:(CGPoint)delta;
@@ -44,8 +46,10 @@
 - (float)horizontalMargin;
 - (float)horizontalPadding:(int)nPage;
 - (void)initScale;
+- (void)loadOverlay;
 - (BOOL)isCleanup;
-- (void)tap:(CGPoint)point;
+// return 'need to show menu'
+- (BOOL)tap:(CGPoint)point;
 - (void)update;
 - (void)zoom:(float)scale focus:(CGPoint)focus;
 - (int)nPage;
