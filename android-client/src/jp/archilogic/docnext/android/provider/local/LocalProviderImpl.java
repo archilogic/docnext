@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import jp.archilogic.docnext.android.exception.NoMediaMountException;
 import jp.archilogic.docnext.android.info.BookmarkInfo;
@@ -39,6 +40,23 @@ import com.google.common.collect.Lists;
 public class LocalProviderImpl implements LocalProvider {
     private final LocalPathManager _pathManager = new LocalPathManager();
 
+    @SuppressWarnings("rawtypes")
+    @Override
+    public Map[] annotation( final String localDir , final int page ) {
+        try {
+            Map[] map;
+
+            if (!(new File(_pathManager.getAnnotationPath(localDir, page)).exists())) {
+                return null;
+            }
+
+            map = getJsonInfo(_pathManager.getAnnotationPath(localDir, page), Map[].class);
+            return map;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
     private void checkMediaMount() throws NoMediaMountException {
         if ( !Environment.MEDIA_MOUNTED.equals( Environment.getExternalStorageState() ) ) {
             throw new NoMediaMountException();

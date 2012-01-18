@@ -2,6 +2,7 @@ package jp.archilogic.docnext.android.provider.local;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import jp.archilogic.docnext.android.exception.NoMediaMountException;
 import jp.archilogic.docnext.android.info.BookmarkInfo;
@@ -16,6 +17,9 @@ import android.graphics.RectF;
  * This interface may be change (for requested feature)
  */
 public interface LocalProvider {
+	@SuppressWarnings("rawtypes")
+	Map[] annotation( final String localDir , final int page ) throws NoMediaMountException;
+	
     void cleanupImageTextIndex() throws NoMediaMountException;
 
     /**

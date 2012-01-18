@@ -7,4 +7,5 @@ public class ImageInfo {
     public boolean isUseActualSize;
     public int maxNumberOfLevel;
     public boolean isWebp;
+    public boolean hasAnnotation;
 }

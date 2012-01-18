@@ -4,6 +4,7 @@ import java.util.List;
 
 import jp.archilogic.docnext.android.R;
 import jp.archilogic.docnext.android.coreview.image.PageInfo.PageTextureStatus;
+import jp.archilogic.docnext.android.info.AnnotationInfo;
 import jp.archilogic.docnext.android.info.ImageInfo;
 import jp.archilogic.docnext.android.info.SizeFInfo;
 import jp.archilogic.docnext.android.info.SizeInfo;
@@ -11,6 +12,7 @@ import jp.archilogic.docnext.android.provider.remote.RemoteProvider;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Point;
+import android.graphics.RectF;
 import android.opengl.GLES10;
 import android.opengl.GLES11Ext;
 import android.os.SystemClock;
@@ -83,6 +85,35 @@ public class CoreImageRenderEngine {
                 }
 
                 GLES10.glDeleteTextures( n , targets , 0 );
+            }
+        }
+    }
+    
+    private void drawAnnotationOverlay( final CoreImageMatrix matrix , final CoreImageState state ) {
+        int x, y, width, height;
+        
+        if ( state.page < 0 || state.page >= state.overlay.size() ) {
+            return;
+        }
+
+        for ( int delta = -1; delta <= 1; delta++ ) {
+            int page = delta + state.page;
+            if ( page < 0 || page >= state.pages ) {
+                continue;
+            }
+            for ( AnnotationInfo info : state.overlay.get( state.page + delta ) ) {
+
+                RectF rect = info.region;
+                float scale = state.matrix.scale;
+                Point margin = margin( matrix , state , page, delta );
+
+                x = ( int ) ( state.matrix.tx + rect.left * scale * state.pageSize.width + state.getHorizontalPadding() 
+                              - delta * state.pageSize.width * scale ) + margin.x;
+                y = ( int ) ( state.surfaceSize.height - ( state.matrix.ty + rect.top * scale * state.pageSize.height
+                              + state.getVerticalPadding() ) );
+                width = ( int ) ( rect.width() * scale * state.pageSize.width );
+                height = ( int ) ( rect.height() * state.matrix.scale * state.pageSize.height );
+                drawSingleImage( _red.id , x , y - height , width , height );
             }
         }
     }
@@ -254,6 +285,10 @@ public class CoreImageRenderEngine {
         _frameSum += SystemClock.elapsedRealtime() - t;
 
         drawOverlay( _immutableMatrix , _immutablePadding , state , Lists.newArrayList( state.highlights ) );
+        
+        if ( state.overlay != null && state.overlay.size() >= state.pages ) {
+            drawAnnotationOverlay( _immutableMatrix , state );
+        }
 
         _fpsCounter++;
         if ( _fpsCounter == 120 ) {

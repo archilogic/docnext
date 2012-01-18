@@ -13,6 +13,8 @@ import android.content.Context;
  */
 public interface RemoteProvider {
     int TEXTURE_SIZE = 512;
+    
+    DownloadTask getAnnotation( Context context , Receiver< Void > receiver , String endpoint , String localDir , int page );
 
     DownloadTask getImageInfo( Context context , Receiver< Void > receiver , String endpoint , String localDir );
 
