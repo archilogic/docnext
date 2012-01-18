@@ -12,6 +12,14 @@ public class RemoteProviderImpl implements RemoteProvider {
     private final RemotePathManager _remotePathManager = new RemotePathManagerImpl();
     private final LocalPathManager _localPathManager = new LocalPathManager();
 
+    @Override
+    public DownloadTask getAnnotation( Context context , Receiver< Void > receiver , String endpoint , String localDir , int page ) {
+        _localPathManager.ensureImageDir( localDir );
+
+        return new DownloadTask( context , receiver , _remotePathManager.getAnnotationPath( endpoint , page ) ,
+                _localPathManager.getAnnotationPath( localDir, page ) );
+    }
+
     private ConcatDownloadTask getImageContents( final Context context , final Receiver< Void > receiver , final String endpoint ,
             final String localDir , final List< String > names ) {
         _localPathManager.ensureImageDir( localDir );

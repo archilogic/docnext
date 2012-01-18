@@ -46,6 +46,7 @@ import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.PointF;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -68,6 +69,8 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
 
     public static final String BROADCAST_ERROR_NO_SD_CARD = PREFIX + ".broadcast.error.no.sd.card";
     public static final String BROADCAST_ERROR_BROKEN_FILE = PREFIX + ".broadcast.error.broken.file";
+    public static final String BROADCAST_OPEN_URL = PREFIX + ".open.url";
+    public static final String BROADCAST_PLAY_MOVIE = PREFIX + ".play.movie";
 
     public static final String EXTRA_ID = PREFIX + "extra.id";
     public static final String EXTRA_LOCAL_DIR = PREFIX + "extra.local.dir";
@@ -212,6 +215,14 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
                 finishWithAlert( ResultExtra.ERROR_NO_SD_CARD , R.string.no_sdcard_error );
             } else if ( intent.getAction().equals( BROADCAST_ERROR_BROKEN_FILE ) ) {
                 finishWithAlert( ResultExtra.ERROR_BROKEN_FILE , R.string.trouble_with_file_error );
+            } else if ( intent.getAction().equals( BROADCAST_OPEN_URL ) ) {
+                Intent webIntent = new Intent( Intent.ACTION_VIEW );
+                webIntent.setData( Uri.parse(  intent.getStringExtra( "uri" ) ) );
+                startActivity( webIntent );
+            } else if ( intent.getAction().equals( BROADCAST_PLAY_MOVIE ) ) {
+                Intent movieIntent = new Intent( getApplicationContext() , VideoViewActivity.class );
+                movieIntent.putExtra( "uri" , intent.getStringExtra( "uri" ) );
+                startActivity( movieIntent );
             }
         }
 
@@ -242,7 +253,9 @@ public class CoreViewActivity extends Activity implements CoreViewDelegate , Cor
         filter.addAction( HasPage.BROADCAST_PAGE_CHANGED );
         filter.addAction( BROADCAST_ERROR_NO_SD_CARD );
         filter.addAction( BROADCAST_ERROR_BROKEN_FILE );
-
+        filter.addAction( BROADCAST_OPEN_URL );
+        filter.addAction( BROADCAST_PLAY_MOVIE );
+        
         return filter;
     }
 

@@ -21,6 +21,7 @@
         <activity android:name="jp.archilogic.docnext.android.activity.bookmark.BookmarkActivity" />
         <activity android:name="jp.archilogic.docnext.android.activity.toc.TOCActivity" />
         <activity android:name="jp.archilogic.docnext.android.setting.SettingActivity" />
+        <activity android:name="jp.archilogic.docnext.android.activity.VideoViewActivity" />
 
         <service android:name="jp.archilogic.docnext.android.service.DownloadService" />
 

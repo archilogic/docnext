@@ -2,6 +2,11 @@ package jp.archilogic.docnext.android.provider.remote;
 
 public class RemotePathManagerImpl implements RemotePathManager {
     @Override
+    public String getAnnotationPath( final String endpoint, final int page ) {
+        return String.format( "%s%d.anno.json" , getImageDir( endpoint ) , page );
+    }
+    
+    @Override
     public String getImageDir( final String endpoint ) {
         return String.format( "%simage/" , endpoint );
     }

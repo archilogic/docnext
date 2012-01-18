@@ -290,6 +290,27 @@ public class DownloadService extends Service {
         }
     }
 
+    private void ensureAnnotation( final int index, final ImageInfo image, final int page ) {
+        if ( image.hasAnnotation && page < _doc.pages ) {
+            DownloadReceiver receiver = new DownloadReceiver() {
+                @Override
+                public void receive( final Void result ) {
+                    super.receive( result );
+
+                    if ( checkAbort() ) {
+                        return;
+                    }
+                    ensureAnnotation( index , image , page + 1 );
+                }
+            };
+
+            executeTask( Kernel.getRemoteProvider().getAnnotation( getApplicationContext() , receiver , _info.endpoint , _info.localDir ,
+                    page ) );
+        } else {
+            ensureContent( index + 1 );
+        }
+    }
+        
     private void ensureContent( final int index ) {
         try {
             if ( index < _doc.types.size() ) {
@@ -520,13 +541,13 @@ public class DownloadService extends Service {
 
                         incAndDispatchProgress();
 
-                        ensureContent( index + 1 );
+                        ensureAnnotation( index , image , 0 );
                     }
                 } , _info.endpoint , _info.localDir ) );
             } else {
                 incAndDispatchProgress();
 
-                ensureContent( index + 1 );
+                ensureAnnotation( index , image , 0 );
             }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
