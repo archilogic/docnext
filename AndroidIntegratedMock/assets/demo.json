@@ -1,3 +1,4 @@
 [
+{ permitId: "1716", endpoint: "http://ustdoc.com/docnext/dispatch/static/docnext_p/1716/", isSample: false, name: "annotation sample" } ,
   { permitId: "2ap", endpoint: "http://ustdoc.com/docnext/dispatch/static/docnext_p/2/", isSample: false, name: "検索デモ ユーザA p" }
 ]

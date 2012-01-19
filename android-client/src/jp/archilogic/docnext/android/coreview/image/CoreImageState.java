@@ -2,8 +2,12 @@ package jp.archilogic.docnext.android.coreview.image;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantLock;
@@ -14,6 +18,7 @@ import jp.archilogic.docnext.android.coreview.image.CoreImageHighlight.Highlight
 import jp.archilogic.docnext.android.coreview.image.CoreImageRenderer.PageLoader;
 import jp.archilogic.docnext.android.coreview.image.facingpages.Device;
 import jp.archilogic.docnext.android.exception.NoMediaMountException;
+import jp.archilogic.docnext.android.info.AnnotationInfo;
 import jp.archilogic.docnext.android.info.ImageInfo;
 import jp.archilogic.docnext.android.info.SizeInfo;
 import jp.archilogic.docnext.android.provider.local.LocalPathManager;
@@ -83,6 +88,8 @@ public class CoreImageState implements PageHolder {
     private String _keyword;
     private final Executor _keywordTaskExecutor = Executors.newSingleThreadExecutor();
     private int _keywordTaskCount = 0;
+    
+    List< Set< AnnotationInfo >> overlay;
 
     CoreImageState( final Context context ) {
         _context = context;
@@ -157,6 +164,26 @@ public class CoreImageState implements PageHolder {
         }
 
         direction.updateOffset( this , true );
+    }
+    
+    private void changeToPage( int destPage ) {
+        if ( _pageChangeListener != null ) {
+            _pageChangeListener.onPageChange( destPage );
+        }
+
+        for ( int delta = -1; delta <= 1; delta++ ) {
+            _loader.unload( page + delta );
+        }
+
+        for ( int delta = -1; delta <= 1; delta++ ) {
+            _loader.load( destPage + delta );
+        }
+
+        page = destPage;
+
+        if ( _pageChangedListener != null ) {
+            _pageChangedListener.onPageChanged( page );
+        }
     }
 
     private void changeToPrevPage() {
@@ -290,6 +317,66 @@ public class CoreImageState implements PageHolder {
     boolean isCleanup() {
         return _cleanup.isIn;
     }
+    
+    @SuppressWarnings("rawtypes")
+    public void loadOverlay() {
+        if ( !image.hasAnnotation ) {
+            return;
+        }
+        try {
+            overlay = new ArrayList< Set< AnnotationInfo >>();
+            for ( int i = 0; i < pages; i++ ) {
+                Map[] list = Kernel.getLocalProvider().annotation( localDir , i );
+                Set< AnnotationInfo > set = new HashSet< AnnotationInfo >();
+
+                for ( Map map : list ) {
+                    @SuppressWarnings("unchecked")
+                    AnnotationInfo info = new AnnotationInfo( map );
+                    set.add( info );
+                }
+                overlay.add( set );
+            }
+        } catch (NoMediaMountException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private boolean inRegion( final PointF point, final RectF region ) {
+        RectF regionOnScreen = new RectF();
+
+        regionOnScreen.left = matrix.tx + region.left * pageSize.width * matrix.scale + getHorizontalPadding();
+        regionOnScreen.right = regionOnScreen.left + region.width() * pageSize.width * matrix.scale;
+        regionOnScreen.top = matrix.ty + region.top * pageSize.height * matrix.scale + getVerticalPadding();
+        regionOnScreen.bottom = regionOnScreen.top + region.height() * pageSize.height * matrix.scale;
+
+        if ( regionOnScreen.contains( point.x , point.y ) ) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean onTapAction( final PointF point ) {
+        for ( AnnotationInfo info : overlay.get( page ) ) {
+            if ( inRegion( point , info.region ) ) {
+                String actionName = info.actionName;
+                if ( actionName.equals( "GoToPage" ) ) {
+                    changeToPage( info.page );
+                    _willGoNextPage = false;
+                    _willGoPrevPage = false;
+                } else if ( actionName.equals( "URI" ) ) {
+                    Intent intent = new Intent( CoreViewActivity.BROADCAST_OPEN_URL );
+                    intent.putExtra( "uri" , info.uri );
+                    _context.sendBroadcast( intent );
+                } else if ( actionName.equals( "Movie" ) ) {
+                    Intent intent = new Intent( CoreViewActivity.BROADCAST_PLAY_MOVIE );
+                    intent.putExtra( "uri" , info.target );
+                    _context.sendBroadcast( intent );
+                }
+                return true;
+            }
+        }
+        return false;
+    }
 
     private void onScaleChange( final float scale ) {
         final float EPS = ( float ) 1e-5;
@@ -333,11 +420,19 @@ public class CoreImageState implements PageHolder {
 
         final int delta = dx * direction.toXSign() + dy * direction.toYSign();
 
-        if ( delta > 0 && hasNextPage() ) {
-            _willGoNextPage = true;
-        } else if ( delta < 0 && hasPrevPage() ) {
-            _willGoPrevPage = true;
+        boolean tookAction = false;
+        if ( overlay != null ) {
+            tookAction = onTapAction( point );
         }
+        
+        if ( !tookAction ) {
+            if ( delta > 0 && hasNextPage() ) {
+                _willGoNextPage = true;
+            } else if ( delta < 0 && hasPrevPage() ) {
+                _willGoPrevPage = true;
+            }
+        }
+        
     }
 
     /**

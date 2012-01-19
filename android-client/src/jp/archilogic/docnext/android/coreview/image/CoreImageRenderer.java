@@ -244,6 +244,10 @@ public class CoreImageRenderer implements Renderer {
     int getPage() {
         return _state.page;
     }
+    
+    void loadOverlay() {
+        _state.loadOverlay();
+    }
 
     @Override
     public void onDrawFrame( final GL10 gl ) {
@@ -328,6 +332,10 @@ public class CoreImageRenderer implements Renderer {
             _state.pages = doc.pages;
 
             _state.spreadFirstPages = Kernel.getLocalProvider().getSpreadFirstPages( _state.localDir );
+            
+            if ( Kernel.getLocalProvider().isCompleted( getLocalDir() ) ) {
+                _state.loadOverlay();
+            }
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
             _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );

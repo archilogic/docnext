@@ -1,6 +1,8 @@
 package jp.archilogic.docnext.android.provider.remote;
 
 public interface RemotePathManager {
+    String getAnnotationPath( String endpoint , int page );
+	  
     String getImageDir( String endpoint );
 
     String getImageInfoPath( String endpoint );

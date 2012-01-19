@@ -72,6 +72,8 @@ public class CoreImageView extends FrameLayout implements CoreView , HasPage , N
                 }
             } else if ( intent.getAction().equals( HasPage.BROADCAST_PAGE_CHANGED ) ) {
                 refreshDownloadIndicator();
+            } else if ( intent.getAction().equals( DownloadService.BROADCAST_DOWNLOAD_COMPLETED ) ) {
+            	_renderer.loadOverlay();
             }
         }
     };
@@ -98,6 +100,7 @@ public class CoreImageView extends FrameLayout implements CoreView , HasPage , N
         final IntentFilter filter = new IntentFilter();
         filter.addAction( DownloadService.BROADCAST_DOWNLOAD_DOWNLOADED );
         filter.addAction( HasPage.BROADCAST_PAGE_CHANGED );
+        filter.addAction( DownloadService.BROADCAST_DOWNLOAD_COMPLETED );
         getContext().registerReceiver( _remoteProviderReceiver , filter );
     }
 
@@ -140,7 +143,7 @@ public class CoreImageView extends FrameLayout implements CoreView , HasPage , N
     public void highlight( final String keyword ) {
         _renderer.setKeyword( keyword );
     }
-
+    
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
