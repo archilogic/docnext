@@ -323,6 +323,7 @@ public class CoreImageState implements PageHolder {
         if ( !image.hasAnnotation ) {
             return;
         }
+
         try {
             overlay = new ArrayList< Set< AnnotationInfo >>();
             for ( int i = 0; i < pages; i++ ) {
