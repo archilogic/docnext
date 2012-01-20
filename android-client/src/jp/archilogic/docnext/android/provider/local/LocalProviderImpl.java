@@ -1,17 +1,26 @@
 package jp.archilogic.docnext.android.provider.local;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.NoSuchPaddingException;
+
+import jp.archilogic.docnext.android.drm.Key;
 import jp.archilogic.docnext.android.exception.NoMediaMountException;
 import jp.archilogic.docnext.android.info.BookmarkInfo;
 import jp.archilogic.docnext.android.info.DocInfo;
@@ -34,6 +43,7 @@ import org.apache.commons.io.IOUtils;
 import android.content.res.Resources;
 import android.graphics.RectF;
 import android.os.Environment;
+import android.util.Log;
 
 import com.google.common.collect.Lists;
 
@@ -94,7 +104,7 @@ public class LocalProviderImpl implements LocalProvider {
 
     @Override
     public DownloadInfo getDownloadInfo() throws NoMediaMountException , JSONException {
-        return getJsonInfo( _pathManager.getDownloadInfoPath() , DownloadInfo.class );
+        return getPlainJsonInfo( _pathManager.getDownloadInfoPath() , DownloadInfo.class );
     }
 
     @Override
@@ -176,6 +186,52 @@ public class LocalProviderImpl implements LocalProvider {
             return null;
         }
 
+        Log.d("docnext", path);
+        
+        String json;
+        try {
+            Cipher c = Cipher.getInstance( Key.algorithm );
+            c.init( Cipher.DECRYPT_MODE , Key.keySpec );
+            CipherInputStream input = new CipherInputStream( new FileInputStream( f ) , c );
+            //json = FileUtils.readFileToString( f );
+            InputStreamReader reader = new InputStreamReader( input );
+            StringBuilder sb = new StringBuilder();
+            int length = 100;
+            char[] buffer = new char[length];
+            int offset = 0;
+            int n = 0;
+            while ( ( n =  reader.read( buffer , offset , length ) ) != -1 ) {
+                sb.append( buffer , 0 , n );
+                Log.d( "docnext" , sb.toString() );
+            }
+            json = sb.toString();
+        } catch ( final IOException e ) {
+            throw new RuntimeException( e );
+        } catch (InvalidKeyException e) {
+            throw new RuntimeException( e );
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException( e );
+        } catch (NoSuchPaddingException e) {
+            throw new RuntimeException( e );
+        }
+
+        JSON.prototype = CustomJSON.class;
+
+        return JSON.decode( json , cls );
+    }
+
+    private < T > T getPlainJsonInfo( final String path , final Class< ? extends T > cls ) throws NoMediaMountException , JSONException {
+        checkMediaMount();
+
+        Log.d( "docnext" , path );
+        
+        final File f = new File( path );
+
+        if ( !f.exists() ) {
+            return null;
+        }
+
+        
         String json;
         try {
             json = FileUtils.readFileToString( f );
@@ -187,7 +243,7 @@ public class LocalProviderImpl implements LocalProvider {
 
         return JSON.decode( json , cls );
     }
-
+    
     @Override
     public int getLastOpenedPage( final String localDir ) throws NoMediaMountException {
         checkMediaMount();
