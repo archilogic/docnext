@@ -7,14 +7,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketTimeoutException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.CipherOutputStream;
-import javax.crypto.NoSuchPaddingException;
+import javax.crypto.IllegalBlockSizeException;
 
-import jp.archilogic.docnext.android.drm.Key;
+import jp.archilogic.docnext.android.drm.Blowfish;
 import jp.archilogic.docnext.android.provider.local.LocalPathManager;
 import jp.archilogic.docnext.android.util.NetUtil;
 
@@ -22,6 +20,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import android.content.Context;
+import android.util.Log;
 
 public class DownloadTask extends BaseDownloadTask {
     private final String _remotePath;
@@ -44,30 +43,15 @@ public class DownloadTask extends BaseDownloadTask {
 
         do {
             try {
-                InputStream in = null;
+                InputStream in = new BufferedInputStream( NetUtil.get().get( _remotePath ) , 8 * 1024 );
 
                 try {
-                    in = new BufferedInputStream( NetUtil.get().get( _remotePath ) , 8 * 1024 );
 
                     OutputStream out = null;
-                    CipherOutputStream output = null;
-                    Cipher c = null;
-                    
-                    try {
-                        c = Cipher.getInstance( Key.algorithm );
-                        c.init( Cipher.ENCRYPT_MODE , Key.keySpec );
-                    } catch (NoSuchAlgorithmException e) {
-                        e.printStackTrace();
-                    } catch (NoSuchPaddingException e) {
-                        e.printStackTrace();
-                    } catch (InvalidKeyException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
+                    Cipher c = Blowfish.getEncryptor();
 
                     try {
                         out = new BufferedOutputStream( FileUtils.openOutputStream( workFile ) , 8 * 1024 );
-                        output = new CipherOutputStream( out , c );
 
                         final int BUF_SIZE = 1024 * 8;
                         final byte[] buffer = new byte[ BUF_SIZE ];
@@ -76,13 +60,16 @@ public class DownloadTask extends BaseDownloadTask {
                                 return;
                             }
 
-                            // out.write( buffer , 0 , n );
-                            output.write( buffer , 0 , n );
+                            final byte[] encrypted = c.doFinal( buffer , 0 , n );
+                            out.write( encrypted , 0 , encrypted.length );
                         }
                         
+                    } catch (IllegalBlockSizeException e) {
+                        e.printStackTrace();
+                    } catch (BadPaddingException e) {
+                        e.printStackTrace();
                     } finally {
                         IOUtils.closeQuietly( out );
-                        IOUtils.closeQuietly( output );
                     }
                 } finally {
                     IOUtils.closeQuietly( in );
@@ -107,6 +94,7 @@ public class DownloadTask extends BaseDownloadTask {
             return;
         }
 
+        Log.d( "docnext" , _localPath );
         FileUtils.moveFile( workFile , new File( _localPath ) );
 
         new File( _localPath + DOWNLOADING_POSTFIX ).delete();

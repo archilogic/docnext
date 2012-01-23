@@ -3,24 +3,23 @@ package jp.archilogic.docnext.android.provider.local;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
-import javax.crypto.NoSuchPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.ShortBufferException;
 
-import jp.archilogic.docnext.android.drm.Key;
+import jp.archilogic.docnext.android.drm.Blowfish;
 import jp.archilogic.docnext.android.exception.NoMediaMountException;
 import jp.archilogic.docnext.android.info.BookmarkInfo;
 import jp.archilogic.docnext.android.info.DocInfo;
@@ -186,32 +185,30 @@ public class LocalProviderImpl implements LocalProvider {
             return null;
         }
 
-        Log.d("docnext", path);
-        
         String json;
         try {
-            Cipher c = Cipher.getInstance( Key.algorithm );
-            c.init( Cipher.DECRYPT_MODE , Key.keySpec );
-            CipherInputStream input = new CipherInputStream( new FileInputStream( f ) , c );
-            //json = FileUtils.readFileToString( f );
-            InputStreamReader reader = new InputStreamReader( input );
-            StringBuilder sb = new StringBuilder();
-            int length = 100;
-            char[] buffer = new char[length];
-            int offset = 0;
+            Cipher c = Blowfish.getDecryptor();
+            InputStream input = new FileInputStream( f );
+            int length = 1024 * 8;
+            byte[] buffer = new byte[length];
+            byte[] decrypted = new byte[length];
             int n = 0;
-            while ( ( n =  reader.read( buffer , offset , length ) ) != -1 ) {
-                sb.append( buffer , 0 , n );
-                Log.d( "docnext" , sb.toString() );
+            int total = 0;
+            while ( ( n =  input.read( buffer , 0 , length ) ) != -1 ) {
+                int out_num = c.doFinal( buffer , 0 , n , decrypted , total );
+                total += out_num;
             }
-            json = sb.toString();
+            json = new String(decrypted , 0, total , "UTF-8" );
         } catch ( final IOException e ) {
             throw new RuntimeException( e );
-        } catch (InvalidKeyException e) {
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
             throw new RuntimeException( e );
-        } catch (NoSuchAlgorithmException e) {
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
             throw new RuntimeException( e );
-        } catch (NoSuchPaddingException e) {
+        } catch (ShortBufferException e) {
+            e.printStackTrace();
             throw new RuntimeException( e );
         }
 
