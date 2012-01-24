@@ -25,7 +25,7 @@
 
         <service android:name="jp.archilogic.docnext.android.service.DownloadService" />
 
-        <provider android:name="jp.archilogic.docnext.android.provider.FullTextSearchProvider" android:authorities="jp.archilogic.docnext.android.provider.FullTextSearchProvider" />
+        <provider android:name="jp.archilogic.docnext.android.provider.TextSearchProvider" android:authorities="jp.archilogic.docnext.android.provider.TextSearchProvider" />
 
     </application>
 

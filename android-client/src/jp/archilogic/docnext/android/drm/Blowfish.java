@@ -12,17 +12,8 @@ public class Blowfish {
     public static SecretKeySpec skeySpec;
     
     public static SecretKeySpec getSecretKeySpec() {
-        @SuppressWarnings("unused")
-        byte[] raw = { 
-                0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
-                0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
-                0x10, 0x10, 0x10, 0x10
-        };
-
-
         byte[] rawForDES = { 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x20 }; 
         return skeySpec = new SecretKeySpec( rawForDES , algorithm );
-        //return skeySpec = new SecretKeySpec( raw, algorithm);
     }
     
     public static Cipher getInstance() {

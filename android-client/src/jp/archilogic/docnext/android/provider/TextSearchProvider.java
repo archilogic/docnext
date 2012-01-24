@@ -31,7 +31,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-public class FullTextSearchProvider extends ContentProvider {
+public class TextSearchProvider extends ContentProvider {
     public static class SuggestCursor implements Cursor {
         private List< SuggestInfo > _data;
         private int _position;

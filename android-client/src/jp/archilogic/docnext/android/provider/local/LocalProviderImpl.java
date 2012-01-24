@@ -88,7 +88,7 @@ public class LocalProviderImpl implements LocalProvider {
     public List< BookmarkInfo > getBookmarkInfo( final String localDir ) throws NoMediaMountException , JSONException {
         checkMediaMount();
 
-        final BookmarkInfo[] bookmarks = getJsonInfo( _pathManager.getBookmarkPath( localDir ) , BookmarkInfo[].class );
+        final BookmarkInfo[] bookmarks = getPlainJsonInfo( _pathManager.getBookmarkPath( localDir ) , BookmarkInfo[].class );
 
         if ( bookmarks == null ) {
             return Lists.newArrayList();
