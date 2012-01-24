@@ -13,7 +13,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 
-import jp.archilogic.docnext.android.drm.Blowfish;
+import jp.archilogic.docnext.android.drm.Encryption;
 import jp.archilogic.docnext.android.provider.local.LocalPathManager;
 import jp.archilogic.docnext.android.util.NetUtil;
 
@@ -91,7 +91,7 @@ public class ConcatDownloadTask extends BaseDownloadTask {
         }
 
         OutputStream out = null;
-        Cipher cipher = Blowfish.getEncryptor();
+        Cipher cipher = Encryption.getEncryptor();
 
         try {
             out = new BufferedOutputStream( FileUtils.openOutputStream( workFile ) , 8 * 1024 );
@@ -110,7 +110,6 @@ public class ConcatDownloadTask extends BaseDownloadTask {
                     throw new IOException( "assert. unexpected EOF" );
                 }
 
-                //out.write( buf , 0 , read );
                 byte[] encrypted = cipher.update( buf , 0 , read );
                 if ( encrypted != null ) {
                     out.write( encrypted );

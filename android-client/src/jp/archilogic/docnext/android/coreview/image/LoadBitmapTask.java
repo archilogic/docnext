@@ -12,7 +12,7 @@ import javax.crypto.IllegalBlockSizeException;
 import jp.archilogic.docnext.android.Kernel;
 import jp.archilogic.docnext.android.activity.CoreViewActivity;
 import jp.archilogic.docnext.android.coreview.image.CoreImageRenderer.TextureBinder;
-import jp.archilogic.docnext.android.drm.Blowfish;
+import jp.archilogic.docnext.android.drm.Encryption;
 import jp.archilogic.docnext.android.exception.NoMediaMountException;
 
 import org.apache.commons.io.FileUtils;
@@ -67,7 +67,7 @@ public class LoadBitmapTask implements Runnable {
             final String path = Kernel.getLocalProvider().getImageTexturePath( _localDir , page , level , _px , _py , false );
 
             final byte[] data = FileUtils.readFileToByteArray( new File( path ) );
-            Cipher cipher = Blowfish.getDecryptor();
+            Cipher cipher = Encryption.getDecryptor();
 
             final Options o = new Options();
             o.inPreferredConfig = Config.RGB_565;
@@ -105,7 +105,7 @@ public class LoadBitmapTask implements Runnable {
 
             final byte[] data = FileUtils.readFileToByteArray( new File( path ) );
 
-            final Cipher cipher = Blowfish.getDecryptor();
+            final Cipher cipher = Encryption.getDecryptor();
             final byte[] decrypted = cipher.doFinal( data );
             return nativeLoad( decrypted );
         } catch ( final NoMediaMountException e ) {

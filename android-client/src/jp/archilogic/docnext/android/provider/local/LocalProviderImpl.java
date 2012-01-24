@@ -19,7 +19,7 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.ShortBufferException;
 
-import jp.archilogic.docnext.android.drm.Blowfish;
+import jp.archilogic.docnext.android.drm.Encryption;
 import jp.archilogic.docnext.android.exception.NoMediaMountException;
 import jp.archilogic.docnext.android.info.BookmarkInfo;
 import jp.archilogic.docnext.android.info.DocInfo;
@@ -187,7 +187,7 @@ public class LocalProviderImpl implements LocalProvider {
 
         String json;
         try {
-            Cipher c = Blowfish.getDecryptor();
+            Cipher c = Encryption.getDecryptor();
             InputStream input = new FileInputStream( f );
             int length = 1024 * 8;
             byte[] buffer = new byte[length];

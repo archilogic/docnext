@@ -4,16 +4,30 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
 import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
-public class Blowfish {
+public class Encryption {
     static String algorithm = "DES";
     public static SecretKeySpec skeySpec;
     
     public static SecretKeySpec getSecretKeySpec() {
-        byte[] rawForDES = { 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x20 }; 
-        return skeySpec = new SecretKeySpec( rawForDES , algorithm );
+        int keyLength = 0;
+        try {
+            KeyGenerator generator = KeyGenerator.getInstance( algorithm );
+            keyLength = generator.generateKey().getEncoded().length;
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        
+        byte[] raw = "1234567812345678".getBytes();
+        byte[] fitting = new byte[keyLength];
+        for ( int i = 0 ; i < fitting.length ; i++ ) {
+            fitting[ i ] = raw[ i ];
+        }
+        
+        return skeySpec = new SecretKeySpec( fitting , algorithm );
     }
     
     public static Cipher getInstance() {

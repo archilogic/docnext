@@ -12,7 +12,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 
-import jp.archilogic.docnext.android.drm.Blowfish;
+import jp.archilogic.docnext.android.drm.Encryption;
 import jp.archilogic.docnext.android.provider.local.LocalPathManager;
 import jp.archilogic.docnext.android.util.NetUtil;
 
@@ -48,7 +48,7 @@ public class DownloadTask extends BaseDownloadTask {
                 try {
 
                     OutputStream out = null;
-                    Cipher c = Blowfish.getEncryptor();
+                    Cipher c = Encryption.getEncryptor();
 
                     try {
                         out = new BufferedOutputStream( FileUtils.openOutputStream( workFile ) , 8 * 1024 );
@@ -60,10 +60,12 @@ public class DownloadTask extends BaseDownloadTask {
                                 return;
                             }
 
-                            final byte[] encrypted = c.doFinal( buffer , 0 , n );
-                            out.write( encrypted , 0 , encrypted.length );
+                            final byte[] encrypted = c.update( buffer , 0 , n );
+                            if ( encrypted != null ) {
+                                out.write( encrypted , 0 , encrypted.length );
+                            }
                         }
-                        
+                        out.write( c.doFinal() );
                     } catch (IllegalBlockSizeException e) {
                         e.printStackTrace();
                     } catch (BadPaddingException e) {
