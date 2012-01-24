@@ -8,8 +8,7 @@ import android.os.Environment;
 
 public class LocalPathManager {
     // take care this var depends on package name :(
-    //private final String ROOT = Environment.getDataDirectory() + "/data/jp.archilogic.docnext.android.mock/files/";
-    private final String ROOT = "/sdcard/docnext";
+    private final String ROOT = Environment.getDataDirectory() + "/data/jp.archilogic.docnext.android.mock/files/";
 
     private void ensure( final String path ) {
         final File dir = new File( path );
