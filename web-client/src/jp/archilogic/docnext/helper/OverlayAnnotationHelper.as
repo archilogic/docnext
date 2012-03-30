@@ -17,9 +17,9 @@ package jp.archilogic.docnext.helper {
             _converter = converter;
         }
 
-        private var _page : PageComponent;
-        private var _converter : Function;
         private var _changePageHanlder : Function;
+        private var _converter : Function;
+        private var _page : PageComponent;
 
         public function set annotation( value : Array ) : * {
             for each ( var anno : Object in value ) {

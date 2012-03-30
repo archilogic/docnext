@@ -7,10 +7,10 @@ package jp.archilogic.docnext.ui {
     import jp.archilogic.docnext.resource.Resource;
 
     public class DocumentComponentArrowIndicator extends Canvas {
-        private static const ARROW_MODE_RIGHT : int = 1;
-        private static const ARROW_MODE_LEFT : int = 0;
-        private static const ARROW_MODE_UNDEFINED : int = -1;
         private static const ARROW_HORIZONTAL_SIZE : Object = { width: 76 , height: 87 };
+        private static const ARROW_MODE_LEFT : int = 0;
+        private static const ARROW_MODE_RIGHT : int = 1;
+        private static const ARROW_MODE_UNDEFINED : int = -1;
         private static const ARROW_PADDING : Number = 10;
         private static const ARROW_THREASHOLD : Number = 100;
 
@@ -18,13 +18,12 @@ package jp.archilogic.docnext.ui {
             _arrowMode = ARROW_MODE_UNDEFINED;
         }
 
-        private var _pageRectFunc : Function;
+        private var _arrowMode : int;
+        private var _currentArrow : Image;
         private var _hasLeftFunc : Function;
         private var _hasRightFunc : Function;
         private var _isAnimatingFunc : Function;
-
-        private var _currentArrow : Image;
-        private var _arrowMode : int;
+        private var _pageRectFunc : Function;
 
         public function endAnimating() : void {
             mouseMove();

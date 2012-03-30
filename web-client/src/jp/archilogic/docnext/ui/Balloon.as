@@ -27,9 +27,9 @@ package jp.archilogic.docnext.ui {
             drawBackground();
         }
 
+        private var _parentTip : Point;
         private var _textField : TextField;
         private var _tip : Point;
-        private var _parentTip : Point;
 
         public function adjust( parentScale : Number ) : void {
             var scale : Number = 1.0 / parentScale;
@@ -69,7 +69,6 @@ package jp.archilogic.docnext.ui {
 
             graphics.lineTo( w , h - CORNER_RAD );
             graphics.curveTo( w , h , w - CORNER_RAD , h );
-
 
             graphics.lineTo( w / 2 + TIP_SIZE , h );
             graphics.lineTo( w / 2 , h + TIP_SIZE );

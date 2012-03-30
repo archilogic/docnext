@@ -14,10 +14,9 @@ package jp.archilogic.docnext.ui {
             addChild( _ui );
         }
 
-        private var _ui : SelectionContextMenuUI;
-
-        private var _page : PageComponent;
         private var _dismissFunc : Function;
+        private var _page : PageComponent;
+        private var _ui : SelectionContextMenuUI;
 
         private function changeToHighlightButtonClickHandler( e : MouseEvent ) : void {
             e.stopPropagation();

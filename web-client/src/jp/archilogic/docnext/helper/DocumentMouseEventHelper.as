@@ -2,14 +2,13 @@ package jp.archilogic.docnext.helper {
     import flash.events.Event;
     import flash.events.IEventDispatcher;
     import flash.events.MouseEvent;
+    import flash.events.TimerEvent;
     import flash.geom.Point;
-    
-    import jp.archilogic.docnext.ui.DocumentComponentArrowIndicator;
-    import jp.archilogic.docnext.ui.PageComponent;
-    
+    import flash.utils.Timer;
     import mx.core.Container;
     import mx.core.UIComponent;
-    
+    import jp.archilogic.docnext.ui.DocumentComponentArrowIndicator;
+    import jp.archilogic.docnext.ui.PageComponent;
     import spark.components.Group;
     import spark.components.Scroller;
 
@@ -20,34 +19,30 @@ package jp.archilogic.docnext.helper {
             _selecting = false;
         }
 
-        private var _scroller : Group;
-        private var _contextMenuHelper : ContextMenuHelper;
-
-        // menu var
-        private var _isMenuVisibleFunc : Function;
-        private var _changeMenuVisiblityFunc : Function;
-        // change page var
         private var _arrowIndicator : DocumentComponentArrowIndicator;
+        private var _changeMenuVisiblityFunc : Function;
         private var _changePageFunc : Function;
-        // selecting var
-        private var _selecting : Boolean;
-        private var _selectingTarget : PageComponent;
-        private var _selectingEdge : int;
-        private var _hasSelection : Boolean;
-
+        private var _contextMenuHelper : ContextMenuHelper;
         private var _currentPagesFunc : Function;
-
+        private var _hasSelection : Boolean;
         private var _isClick : Boolean;
+        private var _isMenuVisibleFunc : Function;
         private var _mouseDownPoint : Point;
         private var _mouseDownScrollPos : Point;
+        private var _scroller : Group;
+        private var _selecting : Boolean;
+        private var _selectingEdge : int;
+        private var _selectingTarget : PageComponent;
+        private var _zoomPageFunc : Function;
+
+        public function get arrowIndicator() : DocumentComponentArrowIndicator {
+            return _arrowIndicator;
+        }
 
         public function set arrowIndicator( value : DocumentComponentArrowIndicator ) : * {
             _arrowIndicator = value;
         }
-		public function get arrowIndicator( ) : DocumentComponentArrowIndicator
-		{
-			return _arrowIndicator;
-		}
+
         public function set changeMenuVisiblityFunc( value : Function ) : * {
             _changeMenuVisiblityFunc = value;
         }
@@ -87,6 +82,10 @@ package jp.archilogic.docnext.helper {
             _selecting = value;
         }
 
+        public function set zoomPageFunc( value : Function ) : * {
+            _zoomPageFunc = value;
+        }
+
         private function clickHandler( e : MouseEvent ) : void {
             if ( !_isClick ) {
                 return;
@@ -100,8 +99,12 @@ package jp.archilogic.docnext.helper {
                 _changeMenuVisiblityFunc( true );
             } else if ( _arrowIndicator.isShowingIndicator ) {
                 _changePageFunc( _arrowIndicator.isShowingLeftIndicator ? 1 : -1 );
-            } else {
+            } else if ( e.currentTarget.stage.stageHeight / 10 > e.stageY ) {
                 _changeMenuVisiblityFunc( true );
+            } else {
+                _scroller.horizontalScrollPosition += e.stageX / 2;
+                _scroller.verticalScrollPosition += e.stageY / 2;
+                _zoomPageFunc();
             }
         }
 
@@ -129,8 +132,11 @@ package jp.archilogic.docnext.helper {
             }
 
             for each ( var page : PageComponent in _currentPagesFunc() ) {
-                if( page == null) page = new PageComponent(page.page);
-                if( page !=null) page.initSelection();
+                if ( page == null )
+                    page = new PageComponent( page.page );
+
+                if ( page != null )
+                    page.initSelection();
                 page.clearEmphasize();
             }
 

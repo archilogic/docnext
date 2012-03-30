@@ -12,9 +12,9 @@ package jp.archilogic.docnext.ui {
             addEventListener( MouseEvent.MOUSE_UP , mouseUpHandler );
         }
 
+        private var _sourceDown : Object;
         private var _sourceNormal : Object;
         private var _sourceOver : Object;
-        private var _sourceDown : Object;
 
         override public function set enabled( value : Boolean ) : void {
             super.enabled = value;

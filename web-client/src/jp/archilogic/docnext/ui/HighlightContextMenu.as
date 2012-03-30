@@ -16,11 +16,10 @@ package jp.archilogic.docnext.ui {
             addChild( _ui );
         }
 
-        private var _ui : HighlightContextMenuUI;
-
-        private var _overlay : OverlayHelper;
-        private var _initComment : String;
         private var _dismissFunc : Function;
+        private var _initComment : String;
+        private var _overlay : OverlayHelper;
+        private var _ui : HighlightContextMenuUI;
 
         private function blueHighlightButtonClick( e : MouseEvent ) : void {
             e.stopPropagation();

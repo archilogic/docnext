@@ -1,23 +1,24 @@
-Web�ŃZ�b�g�A�b�v
-git�Ń\�[�X�R�[�h�����
+Web版セットアップ
+gitでソースコードを入手
 
-git clone git@git.archilogic.jp:docnext.git [�쐬����f�B���N�g����]
-git checkout square-texture
-��L��[�쐬����f�B���N�g����]/web-client/web-client��Web�ł̃v���W�F�N�g�ł�
-�r���h
-
-�v���W�F�N�g�̒��ɂ���`.sample�t�@�C�����R�s�[���āA
-�`.sample��.sample�𔲂����`�����ɕύX
-�i.project.sample����.project.sample��.project�𐶐�
-
-FlushBuilder���œǂݍ���Ńr���h
-
-�r���h���Đ������ꂽ�t�@�C����S�ăT�[�o�[���ɒu��
-�iDocumentRoot�Ɏw�肳��Ă���docnext-server/war�ɒu���Ă܂�
+git clone git@git.archilogic.jp:docnext.git [作成するディレクトリ名]
+上記の[作成するディレクトリ名]/web-clientがWeb版のプロジェクトです
 
 
-�{��
+ビルド
 
-�{���̓T�[�o�[�N����r���h�����t�@�C����u�����ꏊ��Viewer.html������̂�id��n��
-id��1�̃h�L�������g���{������ꍇ���L�̂悤��URL�ɂȂ�܂�
-http://[Web�ł̃t�@�C����u�����Ƃ���A�h���C����localhost�Atomcat��docnext�ƌ���Document���Ȃ炱����(localhost/docnext)]/Viewer.html?id=1
+プロジェクトの中にある〜.sampleファイルをコピーして、
+[ファイル名].sampleを.sampleを抜いた[ファイル名]だけに変更
+（.project.sampleから.project.sampleと.projectを生成
+
+FlashBuilder等で読み込んでビルド
+
+ビルドして生成されたファイルを全てサーバー側に置く
+（DocumentRootに指定されているdocnext-server/warに置いてます
+
+
+閲覧
+
+閲覧はサーバー起動後ビルドしたファイルを置いた場所にLauncher.htmlがあるのでidを渡す
+idが1のドキュメントを閲覧する場合下記のようなURLになります
+http://[Web版のファイルを置いたところ、ドメインがlocalhost、tomcatでdocnextと言うDocument名ならここは(localhost/docnext)]/Launcher.html?bid=1

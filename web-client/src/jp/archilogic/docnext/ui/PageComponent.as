@@ -1,18 +1,16 @@
 package jp.archilogic.docnext.ui {
-    import __AS3__.vec.Vector;
-    
     import flash.display.Bitmap;
     import flash.display.BitmapData;
     import flash.display.Loader;
     import flash.events.Event;
     import flash.geom.Point;
     import flash.geom.Rectangle;
-    
-    import jp.archilogic.docnext.helper.ContextMenuHelper;
-    import jp.archilogic.docnext.helper.OverlayHelper;
-    
     import mx.controls.Image;
     import mx.events.FlexEvent;
+    import __AS3__.vec.Vector;
+    import jp.archilogic.docnext.helper.ContextMenuHelper;
+    import jp.archilogic.docnext.helper.OverlayHelper;
+    import jp.archilogic.docnext.util.DocumentLoadUtil;
 
     public class PageComponent extends Image {
         public function PageComponent( page : int ) {
@@ -28,8 +26,10 @@ package jp.archilogic.docnext.ui {
             } );
         }
 
-        private var _overlayHelper : OverlayHelper;
         private var _hasCreationCompleted : Boolean = false;
+        private var _loaded : Boolean = false;
+        private var _loading : Boolean = false;
+        private var _overlayHelper : OverlayHelper;
 
         public function set annotation( value : Array ) : * {
             _overlayHelper.annotation = value;
@@ -79,8 +79,32 @@ package jp.archilogic.docnext.ui {
             _overlayHelper.initSelection();
         }
 
+        // TODO: misspell
         public function set isMenuVisbleFunc( value : Function ) : * {
             _overlayHelper.isMenuVisibleFunc = value;
+        }
+
+        public function loadAll( docId : Number , ratio : Number , level : int , size : Point ,
+                                 contextMenuHelper : ContextMenuHelper , isMenuVisibleFunc : Function ,
+                                 changePageHandler : Function , next : Function ) : void {
+            _loading = true;
+
+            this.docId = docId;
+            this.ratio = ratio;
+            this.contextMenuHelper = contextMenuHelper;
+            this.isMenuVisbleFunc = isMenuVisibleFunc;
+            this.changePageHandler = changePageHandler;
+
+            var self : PageComponent = this;
+
+            DocumentLoadUtil.loadPageSource( docId , _overlayHelper.page , level , size ,
+                                             function( pageSource : BitmapData ) : void {
+                loadData( pageSource );
+
+                DocumentLoadUtil.loadRegions( self );
+
+                next();
+            } );
         }
 
         public function loadData( data : BitmapData ) : void {
@@ -89,18 +113,29 @@ package jp.archilogic.docnext.ui {
             //loader.contentLoaderInfo.addEventListener( Event.COMPLETE , function() : void {
             //    loader.removeEventListener( Event.COMPLETE , arguments.callee );
 
-                //var bd : BitmapData = new BitmapData( loader.width , loader.height );
-                //bd.draw( loader );
+            //var bd : BitmapData = new BitmapData( loader.width , loader.height );
+            //bd.draw( loader );
 
-                source = new Bitmap( data , 'auto' , true );
+            source = new Bitmap( data , 'auto' , true );
 
-                width = data.width;//loader.width;
-                height = data.height;//loader.height;
+            width = data.width; //loader.width;
+            height = data.height; //loader.height;
 
-                dispatchEvent( new Event( Event.COMPLETE ) );
+            dispatchEvent( new Event( Event.COMPLETE ) );
+
+            _loaded = true;
+            _loading = false;
             //} );
 
             //loader.loadBytes( data );
+        }
+
+        public function get loaded() : Boolean {
+            return _loaded;
+        }
+
+        public function get loading() : Boolean {
+            return _loading;
         }
 
         public function get page() : int {
@@ -117,6 +152,10 @@ package jp.archilogic.docnext.ui {
 
         public function set regions( value : Vector.<Rectangle> ) : * {
             _overlayHelper.regions = value;
+        }
+
+        public function get scale() : Number {
+            return _overlayHelper.scale;
         }
 
         public function set scale( value : Number ) : * {

@@ -10,10 +10,9 @@ package jp.archilogic.docnext.helper {
             _holder = holder;
         }
 
-        private var _holder : Container;
-
-        private var _selectionContextMenu : SelectionContextMenu;
         private var _highlightContextMenu : HighlightContextMenu;
+        private var _holder : Container;
+        private var _selectionContextMenu : SelectionContextMenu;
 
         public function get isShowingHighlightContextMenu() : Boolean {
             return _highlightContextMenu != null;
@@ -25,16 +24,16 @@ package jp.archilogic.docnext.helper {
 
         public function removeHighlightContextMenu() : void {
             Tweener.addTween( _highlightContextMenu , { alpha: 0 , time: 0.5 , onComplete: function() : void {
-                        _holder.removeChild( _highlightContextMenu );
-                        _highlightContextMenu = null;
-                    } } );
+                _holder.removeChild( _highlightContextMenu );
+                _highlightContextMenu = null;
+            } } );
         }
 
         public function removeSelectionContextMenu() : void {
             Tweener.addTween( _selectionContextMenu , { alpha: 0 , time: 0.5 , onComplete: function() : void {
-                        _holder.removeChild( _selectionContextMenu );
-                        _selectionContextMenu = null;
-                    } } );
+                _holder.removeChild( _selectionContextMenu );
+                _selectionContextMenu = null;
+            } } );
         }
 
         public function showHighlightContextMenu( target : OverlayHelper , initComment : String ,

@@ -1,25 +1,13 @@
 package jp.archilogic.docnext.ui {
-    import __AS3__.vec.Vector;
-    
-    import com.adobe.serialization.json.JSON;
     import com.foxaweb.pageflip.PageFlip;
-    
     import flash.display.Bitmap;
     import flash.display.BitmapData;
     import flash.display.Shape;
     import flash.events.Event;
     import flash.events.KeyboardEvent;
+    import flash.events.MouseEvent;
     import flash.geom.Point;
     import flash.geom.Rectangle;
-    
-    import jp.archilogic.docnext.dto.DocumentResDto;
-    import jp.archilogic.docnext.helper.ContextMenuHelper;
-    import jp.archilogic.docnext.helper.DocumentMouseEventHelper;
-    import jp.archilogic.docnext.helper.PageHeadHelper;
-    import jp.archilogic.docnext.helper.ResizeHelper;
-    import jp.archilogic.docnext.service.DocumentService;
-    import jp.archilogic.docnext.util.DocumentLoadUtil;
-    
     import mx.collections.ArrayCollection;
     import mx.containers.Canvas;
     import mx.controls.Alert;
@@ -29,8 +17,28 @@ package jp.archilogic.docnext.ui {
     import mx.core.UIComponent;
     import mx.events.FlexEvent;
     import mx.utils.ObjectUtil;
+    import __AS3__.vec.Vector;
+    import caurina.transitions.Tweener;
+    import jp.archilogic.docnext.controller.ViewerController;
+    import jp.archilogic.docnext.dto.DocumentResDto;
+    import jp.archilogic.docnext.dto.DocumentResDto;
+    import jp.archilogic.docnext.helper.ContextMenuHelper;
+    import jp.archilogic.docnext.helper.ContextMenuHelper;
+    import jp.archilogic.docnext.helper.DocumentMouseEventHelper;
+    import jp.archilogic.docnext.helper.DocumentMouseEventHelper;
+    import jp.archilogic.docnext.helper.PageHeadHelper;
+    import jp.archilogic.docnext.helper.PageHeadHelper;
+    import jp.archilogic.docnext.helper.ResizeHelper;
+    import jp.archilogic.docnext.helper.ResizeHelper;
+    import jp.archilogic.docnext.service.DocumentService;
+    import jp.archilogic.docnext.service.DocumentService;
+    import jp.archilogic.docnext.util.DocumentLoadUtil;
+    import jp.archilogic.docnext.util.DocumentLoadUtil;
 
     public class DocumentComponent extends Canvas {
+        public static const TEXTURE_SIZE : int = 512;
+        private static const TEXTURE_LEVEL : int = 1;
+
         public function DocumentComponent() {
             _ui = new DocumentComponentUI();
             _ui.addEventListener( FlexEvent.CREATION_COMPLETE , creationCompleteHandler );
@@ -42,137 +50,126 @@ package jp.archilogic.docnext.ui {
             _mouseEventHelper.contextMenuHelper = _contextMenuHelper;
             _mouseEventHelper.changePageFunc = changePageArrowClickHanlder;
             _mouseEventHelper.currentPagesFunc = getCurrentPages;
+            _mouseEventHelper.zoomPageFunc = zoom;
 
             addEventListener( Event.ADDED_TO_STAGE , addToStageHandler );
+
+            addEventListener( MouseEvent.CLICK , function() : void {
+                view.bookmark.visible = false;
+            } );
         }
-      
-        public function get pages() : Vector.<PageComponent> {
-        	return _pages[_currentDocPos];
-        }
-		public function getCurrentHead():int {
-			return _currentHead;
-		}
-		public function get currentDocPos():int {
-			return _currentDocPos;
-		}
-		public function get ratio() : int {
-			return _infos[ _currentDocPos ].ratio;
-		}
-		public function get docId() : int {
-			return _dtos[ _currentDocPos ].id;
-		}
-		public function get imageInfo() : Object {
-			return _imageInfo;
-		}
-		public function get background() : Bitmap {
-			
-			var bd : BitmapData = new BitmapData( width, height);
-			bd.draw(this);
-			var bitmap : Bitmap = new Bitmap(bd);
-			bitmap.width = this.width;
-			bitmap.height = this.height;
-			return bitmap;
-		}
-		public function get currentPageHeadHelpder() : PageHeadHelper {
-			return _pageHeadHelpers[_currentDocPos];
-		}
-			
-        public function get flow() : Boolean {
-            return "right" != _infos[ _currentDocPos ].flow;
-        }
-		
-		/* public function get infos() : Vector.<Object> {
-			return this._infos;
-		} */
-		
-		private function deleteAllPageCache():void
-		{
-			var total : int = _pages[_currentDocPos].length ;
-			for ( var i : int = 0 ; i < total ; i++ ) {
-				delete _pages[ _currentDocPos ][ i ];
-				_pages[ _currentDocPos ][ i ] = null;
-			}
-		}
-		public function setCurrentHead(pageIndex : int) : void
-		{
-			
-			this._currentHead = _pageHeadHelpers[_currentDocPos].pageToHead(pageIndex);
-			
-			deleteAllPageCache();
-			_ui.wrapper.removeAllElements();
-            //_ui.wrapper.removeAllChildren();
-            
-			loadCurrentHead();
-		}
-		private function loadCurrentHead():void
-		{
-			var loadIndex : int = _pageHeadHelpers[ _currentDocPos ].headToPage( _currentHead );
-			var isSinglePage:Boolean = _pageHeadHelpers[_currentDocPos ].isSingleHead( _currentHead );
-			
-			trace("loadIndex : " + loadIndex);
-			trace("isSinglePage : " + isSinglePage);
-			
-			
-			loadPage(loadIndex, function( page : PageComponent ) : void 
-			{
-				addPage(page, true, function( ):void
-				{
-					if(!isSinglePage)
-					{
-						loadPage( loadIndex + 1 , function( page__ : PageComponent ) : void 
-						{
-							addPage( page__ , false, null, true );
-							
-							loadNeighborPage();
-						} );
-					}
-				}, false);
-			});
-			
-		}
-		public function hasPage(currentDocPos: int , currentHead : int ) : Boolean
-		{
-			var value : Boolean = false;
-			if(_pages[currentDocPos][currentHead] != null)
-				value = true;
-				
-			return value;
-		}
-		public function removeEvents() : void
-		{
-			 stage.removeEventListener(KeyboardEvent.KEY_UP , myKeyUpHandler ); 
-			 /* resizeHelper = new ResizeHelper(this, resizeHandler ); */
-		}
-		public function addEvents() : void
-		{
-			 stage.addEventListener( KeyboardEvent.KEY_UP , myKeyUpHandler ); 
-			 /* resizeHelper.addResizeHelper(); */
-			  resizeHandler(); 
-		}
-		/* private var resizeHelper : ResizeHelper; */
-		private var _ui : DocumentComponentUI;
+
+        public var view : Viewer;
+
+        private var _baseScale : Number;
+        private var _contextMenuHelper : ContextMenuHelper;
         private var _currentDocPos : int;
         private var _currentHead : int;
-        private var _pages : Vector.<Vector.<PageComponent>>;
-        private var _loadingCount : int;
         private var _dtos : Vector.<DocumentResDto>;
-        private var _infos : Vector.<Object>;
         private var _imageInfo : Object;
-        private var _pageHeadHelpers : Vector.<PageHeadHelper>;
-        private var _baseScale : Number;
-        private var _zoomExponent : int;
-        private var _setPageHandler : Function;
+        private var _infos : Vector.<Object>;
         private var _isAnimating : Boolean;
+        private var _loadQueue : Array = [];
+        private var _loadingCount : int;
         private var _mouseEventHelper : DocumentMouseEventHelper;
-        private var _contextMenuHelper : ContextMenuHelper;
+        private var _pageHeadHelpers : Vector.<PageHeadHelper>;
+        private var _pages : Vector.<Vector.<PageComponent>>;
+        private var _setPageHandler : Function;
+        private var _ui : DocumentComponentUI;
+        private var _zoomExponent : int;
         private var progress : ProgressBar;
+
+        public function addEvents() : void {
+            //stage.addEventListener( KeyboardEvent.KEY_UP , myKeyUpHandler );
+            resizeHandler();
+        }
+
+        public function get background() : Bitmap {
+            var bd : BitmapData = new BitmapData( width , height );
+            bd.draw( this );
+
+            var bitmap : Bitmap = new Bitmap( bd );
+            bitmap.width = this.width;
+            bitmap.height = this.height;
+
+            return bitmap;
+        }
+
+        public function calcMaxPageSize() : Point {
+            return calcPageSize( _imageInfo.maxLevel );
+        }
+
+        public function calcThumbPageSize() : Point {
+            return calcPageSize( 0 );
+        }
 
         public function set changeMenuVisiblityHandler( value : Function ) : * {
             _mouseEventHelper.changeMenuVisiblityFunc = value;
         }
 
+        public function get currentDocPos() : int {
+            return _currentDocPos;
+        }
+
+        public function get currentHead() : int {
+            return _currentHead;
+        }
+
+        public function set currentHead( value : int ) : * {
+            _currentHead = value;
+
+            var sumToCurrent : int = 0;
+            var sumTotal : int = 0;
+
+            for ( var index : int = 0 ; index < _infos.length ; index++ ) {
+                if ( index < _currentDocPos ) {
+                    sumToCurrent += _infos[ _currentDocPos ].pages;
+                }
+
+                sumTotal += _infos[ _currentDocPos ].pages;
+            }
+
+            _setPageHandler( currentPage + sumToCurrent , sumTotal );
+        }
+
+        public function set currentHeadByPage( page : int ) : void {
+            _currentHead = _pageHeadHelpers[ _currentDocPos ].pageToHead( page );
+
+            _ui.wrapper.removeAllElements();
+
+            loadFullByPage( currentPage );
+        }
+
+        public function get currentPageByHead() : int {
+            return _pageHeadHelpers[ _currentDocPos ].headToPage( _currentHead );
+        }
+
+        public function get currentPageHeadHelpder() : PageHeadHelper {
+            return _pageHeadHelpers[ _currentDocPos ];
+        }
+
+        public function get docId() : int {
+            return _dtos[ _currentDocPos ].id;
+        }
+
+        public function hasPage( currentDocPos : int , currentHead : int ) : Boolean {
+            return _pages[ currentDocPos ][ currentHead ];
+        }
+
+        public function get imageInfo() : Object {
+            return _imageInfo;
+        }
+
+        public function get isBindingRight() : Boolean {
+            return _infos[ _currentDocPos ].binding == "RIGHT";
+        }
+
         public function set isMenuVisibleHandler( value : Function ) : * {
             _mouseEventHelper.isMenuVisibleFunc = value;
+        }
+
+        public function get jsonInfos() : Vector.<Object> {
+            return _infos;
         }
 
         public function load( dtos : Vector.<DocumentResDto> ) : void {
@@ -180,38 +177,83 @@ package jp.archilogic.docnext.ui {
             _infos = new Vector.<Object>( _dtos.length );
             _pageHeadHelpers = new Vector.<PageHeadHelper>( _dtos.length );
             _pages = new Vector.<Vector.<PageComponent>>( _dtos.length );
-			
+
             loadHelepr( 0 );
+        }
+
+        public function get pageHeadHelpders() : Vector.<PageHeadHelper> {
+            return _pageHeadHelpers;
+        }
+
+        public function get pages() : Vector.<PageComponent> {
+            return _pages[ _currentDocPos ];
+        }
+
+        public function get ratio() : int {
+            return _infos[ _currentDocPos ].ratio;
         }
 
         public function set selecting( value : Boolean ) : void {
             _mouseEventHelper.selecting = value;
         }
 
+        public function setCurrentDocPos( pos : int , page : int = 0 ) : void {
+            _currentDocPos = pos;
+            _currentHead = _pageHeadHelpers[ pos ].pageToHead( page );
+
+            _ui.wrapper.removeAllElements();
+
+            loadFullByPage( currentPage );
+        }
+
         public function set setPageHandler( value : Function ) : * {
             _setPageHandler = value;
         }
 
+        /**
+         * Unused
+         */
         public function zoomIn() : void {
             _zoomExponent = Math.min( _zoomExponent + 1 , 6 );
 
             changeScale();
         }
 
+        /**
+         * Unused
+         */
         public function zoomOut() : void {
             _zoomExponent = Math.max( _zoomExponent - 1 , 0 );
 
             changeScale();
         }
 
-        private function addPage( page : PageComponent , isFore : Boolean , next : Function = null , hidden : Boolean =
-            false ) : void {
+        private function addItemToLoadQueue( index : int ) : void {
+            if ( index >= 0 && index < _infos[ _currentDocPos ].pages ) {
+                if ( !pages[ index ] ) {
+                    var pc : PageComponent = new PageComponent( index );
+
+                    var sz : Point = calcMainPageSize();
+
+                    pc.source = new Bitmap( new BitmapData( sz.x , sz.y ) , 'auto' , true );
+                    pc.width = sz.x;
+                    pc.height = sz.y;
+
+                    pages[ index ] = pc;
+                }
+
+                _loadQueue.push( index );
+            }
+        }
+
+        private function addPage( page : PageComponent , isFore : Boolean , next : Function = null ,
+                                  hidden : Boolean = false ) : void {
             page.addEventListener( Event.ADDED_TO_STAGE , function() : void {
                 page.removeEventListener( Event.ADDED_TO_STAGE , arguments.callee );
 
                 page.callLater( function() : void {
                     // for layouting, maybe...
-                    if ( isFore ) {
+                    if ( isFore == isBindingRight ) {
                         page.x = page.contentWidth;
                     } else {
                         page.x = 0;
@@ -224,15 +266,16 @@ package jp.archilogic.docnext.ui {
             } );
 
             if ( hidden ) {
-                 _ui.wrapper.addElementAt( page , 0 ); 
+                _ui.wrapper.addElementAt( page , 0 );
             } else {
                 _ui.wrapper.addElement( page );
             }
         }
 
         private function addToStageHandler( e : Event ) : void {
-        	this.removeEventListener(Event.ADDED_TO_STAGE , addToStageHandler );
-            stage.addEventListener( KeyboardEvent.KEY_UP , myKeyUpHandler );
+            this.removeEventListener( Event.ADDED_TO_STAGE , addToStageHandler );
+//            stage.addEventListener( KeyboardEvent.KEY_UP , myKeyUpHandler );
+//            stage.addEventListener( KeyboardEvent.KEY_DOWN , myKeyDownHandler );
         }
 
         private function calcBezierPoint( p0 : Point , p1 : Point , cp : Point , t : Number ) : Point {
@@ -247,6 +290,24 @@ package jp.archilogic.docnext.ui {
 
         private function calcCenterY( contentHeight : Number , limit : Number = 0 ) : Number {
             return Math.max( ( _ui.arrowIndicator.height - contentHeight ) / 2 , limit );
+        }
+
+        private function calcMainPageSize() : Point {
+            return calcPageSize( TEXTURE_LEVEL );
+        }
+
+        private function calcPageSize( level : int ) : Point {
+            var isUseActual : Boolean = _imageInfo.maxLevel == level && _imageInfo.isUseActualSize;
+
+            if ( isUseActual ) {
+                return new Point( _imageInfo.width , _imageInfo.height );
+            } else {
+                var factor : int = Math.pow( 2 , level );
+
+                var width : int = TEXTURE_SIZE * factor;
+                var height : int = _imageInfo.height * width / _imageInfo.width;
+                return new Point( width , height );
+            }
         }
 
         private function centering() : void {
@@ -266,24 +327,13 @@ package jp.archilogic.docnext.ui {
             }
 
             if ( !_pageHeadHelpers[ nextDocPos ].isValidHead( head ) ||
-                nextDocPos == _currentDocPos && head == _currentHead || _isAnimating || _loadingCount > 0 ) {
+                nextDocPos == _currentDocPos && head == _currentHead || _isAnimating ) {
                 return;
             }
 
             var isCurrentSingle : Boolean = _pageHeadHelpers[ _currentDocPos ].isSingleHead( _currentHead );
             var isNextSingle : Boolean = _pageHeadHelpers[ nextDocPos ].isSingleHead( head );
-		
-			var fore : PageComponent = getCurrentForePage();
-			var rear : PageComponent = getCurrentRearPage();
-			trace("fore : " + fore);
-			trace("rear : " + rear);
-			if(!fore || !rear ) {
-				trace("isSingle!");
-				isCurrentSingle = true;
-			}
-			trace("isCurrentSingle : " + isCurrentSingle );
-			trace("isNextSingle : " + isNextSingle);
-			
+
             if ( isCurrentSingle ) {
                 if ( isNextSingle ) {
                     changePage1to1( head , nextDocPos );
@@ -300,38 +350,48 @@ package jp.archilogic.docnext.ui {
         }
 
         private function changePage1to1( head : int , docPos : int ) : void {
-            var prev : PageComponent = getCurrentForePage();
+            var isForward : Boolean = docPos > _currentDocPos || docPos >= _currentDocPos && head > _currentHead;
 
-            var prevDocPos : int = _currentDocPos;
-            var prevHead : int = _currentHead;
+            var prev : PageComponent = currentForePage;
 
             _currentDocPos = docPos;
             currentHead = head;
-            var next : PageComponent = getCurrentForePage();
-
-            if ( !next ) {
-                loadPage( _pageHeadHelpers[ docPos ].headToPage( head ) , function( page : PageComponent ) : void {
-                    changePage1to1( head , docPos );
-                } );
-
-                _currentDocPos = prevDocPos;
-                currentHead = prevHead;
-                return;
-            }
+            var next : PageComponent = currentForePage;
 
             next.scale = _ui.wrapper.scaleX;
 
+            var width : int = _ui.wrapper.contentWidth * _ui.wrapper.scaleX;
+
+            if ( !isBindingRight ) {
+                _ui.scroller.x -= width;
+                prev.x = prev.contentWidth;
+            }
+
             addPage( next , false , function( page : PageComponent ) : void {
+                var back : PageComponent = isForward ? prev : next;
+                var removeOnBegin : PageComponent = isForward ? prev : null;
+                var removeOnEnd : PageComponent = isForward ? null : prev;
+
                 isAnimating = true;
-                startFlip( null , prev , true , function() : void {
-                    if ( _ui.wrapper.contains( prev ) ) {
-                        _ui.wrapper.removeElement( prev );
+
+                startFlip( null , back , isForward , function() : void {
+                    if ( removeOnBegin && _ui.wrapper.contains( removeOnBegin ) ) {
+                        _ui.wrapper.removeElement( removeOnBegin );
                     }
                 } , function() : void {
+                    if ( removeOnEnd && _ui.wrapper.contains( removeOnEnd ) ) {
+                        _ui.wrapper.removeElement( removeOnEnd );
+                    }
+
                     next.initSelection();
                     next.clearEmphasize();
 
                     changePageCleanUp();
+
+                    if ( !isBindingRight ) {
+                        _ui.scroller.x += width;
+                        next.x = 0;
+                    }
 
                     isAnimating = false;
                 } );
@@ -339,86 +399,42 @@ package jp.archilogic.docnext.ui {
         }
 
         private function changePage1to2( head : int , docPos : int ) : void {
-			
-			trace("========changePage1to2==================debug========================");
-			trace("head : " + head);
-			trace("docPos : " + docPos);
             var isForward : Boolean = docPos > _currentDocPos || docPos >= _currentDocPos && head > _currentHead;
 
-            var prev : PageComponent = getCurrentForePage();
-
-            var prevDocPos : int = _currentDocPos;
-            var prevHead : int = _currentHead;
+            var prev : PageComponent = currentForePage;
 
             _currentDocPos = docPos;
             currentHead = head;
-            var nextFore : PageComponent = getCurrentForePage();
-            var nextRear : PageComponent = getCurrentRearPage();
+            var nextFore : PageComponent = currentForePage;
+            var nextRear : PageComponent = currentRearPage;
 
-            if ( !nextFore ) {
-                loadPage( _pageHeadHelpers[ docPos ].headToPage( head ) , function( page : PageComponent ) : void {
-                    changePage1to2( head , docPos );
-                } );
-
-                _currentDocPos = prevDocPos;
-                currentHead = prevHead;
-                return;
-            }
-
-            if ( !nextRear ) {
-                loadPage( _pageHeadHelpers[ docPos ].headToPage( head ) + 1 , function( page : PageComponent ) : void {
-                    changePage1to2( head , docPos );
-                } );
-
-                _currentDocPos = prevDocPos;
-                currentHead = prevHead;
-                return;
-            }
-			
             nextFore.scale = nextRear.scale = _ui.wrapper.scaleX;
 
-            /*if ( !isForward ) {
-                _ui.wrapper.x -= _ui.wrapper.width;
-                prev.x += prev.contentWidth;
-            }*/
-            
             var width : int = _ui.wrapper.contentWidth * _ui.wrapper.scaleX;
-			
-            var deltaX : Number =
-                isForward ? calcCenterX( width * 2 ) - calcCenterX( width ) : ( calcCenterX( width ) - calcCenterX( width * 2 ) );
 
-            //( _ui.arrowIndicator.width - contentWidth ) / 2;
-            //Alert.show("delta : " + deltaX + "\n1 : " + calcCenterX( _ui.wrapper.width * 2 ) + "\n2 : " + _ui.arrowIndicator.width + "\nhoge : " + _ui.wrapper.width);
-            
-            var addFirst : PageComponent = isForward ? nextRear : nextFore;
-            var addSecond : PageComponent = isForward ? nextFore : nextRear;
-			trace("nextFore : " + nextFore);
-			trace("nextRear : " + nextRear);
-			trace("isForward : " + isForward);
-			trace("prev : " + prev);
-			trace("prevDocPos : " + prevDocPos);
-			trace("prevHead : " + prevHead);
-			trace("deltaX : " + deltaX);
-			//trace("hasNext : " + hasNextPage);
-            addPage( addFirst , !isForward , function( page : PageComponent ) : void {
-                addPage( addSecond , !isForward , function( page : PageComponent ) : void {
+            var dx : Number = calcCenterX( width * 2 ) - calcCenterX( width );
+
+            var hide : PageComponent = isForward ? nextFore : nextRear;
+            hide.visible = false;
+
+            if ( isForward != isBindingRight ) {
+                _ui.scroller.x -= width;
+                prev.x = prev.contentWidth;
+                dx += width;
+            }
+
+            addPage( nextFore , true , function( page : PageComponent ) : void {
+                addPage( nextRear , false , function( page : PageComponent ) : void {
                     var front : PageComponent = isForward ? nextFore : prev;
                     var back : PageComponent = isForward ? prev : nextRear;
-					trace("front : " + front);
-					trace("back : " + back);
-					//nextFore.visible = nextRear.visible = false;
+
                     isAnimating = true;
+
                     startFlip( front , back , isForward , function() : void {
                         if ( _ui.wrapper.contains( prev ) ) {
                             _ui.wrapper.removeElement( prev );
                         }
                     } , function() : void {
-                        if ( isForward ) {
-                            nextFore.x = nextFore.contentWidth;
-                        } else {
-                            nextRear.x = 0;
-                        }
-						
                         nextFore.initSelection();
                         nextFore.clearEmphasize();
                         nextRear.initSelection();
@@ -426,165 +442,96 @@ package jp.archilogic.docnext.ui {
 
                         changePageCleanUp();
 
+                        hide.visible = true;
+
                         isAnimating = false;
-						nextFore.visible = nextRear.visible = true;
-						trace("nextFore.x :" + nextFore.x );
-						trace("nextRear.x : " + nextRear.x );
-                    } , deltaX );
-                  //  } , 0 );
-        //        } , true );
-        //    } , true );
-			      } , true );
-			  } , true );
+                    } , dx );
+                } , true );
+            } , true );
         }
 
         private function changePage2to1( head : int , docPos : int ) : void {
-			
-			trace("========changePage2to1==================debug========================");
-			trace("head : " + head);
-			trace("docPos : " + docPos);
-			
             var isForward : Boolean = docPos > _currentDocPos || docPos >= _currentDocPos && head > _currentHead;
-			
-            var prevFore : PageComponent = getCurrentForePage();
-            var prevRear : PageComponent = getCurrentRearPage();
 
-            var prevDocPos : int = _currentDocPos;
-            var prevHead : int = _currentHead;
-			
-			
+            var prevFore : PageComponent = currentForePage;
+            var prevRear : PageComponent = currentRearPage;
+
             _currentDocPos = docPos;
             currentHead = head;
-            var next : PageComponent = getCurrentForePage();
-			var hasNextPage:Boolean = hasNext();
-			trace("next : " + next);
-			trace("isForward : " + isForward);
-			trace("prevFore : " + prevFore);
-			trace("prevRear" + prevRear);
-			trace("prevDocPos : " + prevDocPos);
-			trace("prevHead : " + prevHead);
-			trace("hasNext : " + hasNextPage);
-            if ( !next ) {
-                loadPage( _pageHeadHelpers[ docPos ].headToPage( head ) , function( page : PageComponent ) : void {
-                    changePage2to1( head , docPos );
-                } );
-
-                _currentDocPos = prevDocPos;
-                currentHead = prevHead;
-                return;
-            }
+            var next : PageComponent = currentForePage;
 
             next.scale = _ui.wrapper.scaleX;
-            
+
             var width : int = _ui.wrapper.contentWidth * _ui.wrapper.scaleX;
 
-            var deltaX : Number =
-                calcCenterX( width * ( isForward ? 3 : 1 ) / 2 , Number.NEGATIVE_INFINITY ) - calcCenterX( width );
-			
-			trace("deltaX : " + deltaX);
-			
-            addPage( next , isForward , function( page : PageComponent ) : void {
-               var front : PageComponent = isForward ? next : prevFore;
-             //   var front : PageComponent =  next ;
+            var dx : Number = ( isForward == isBindingRight ? -1 : 1 ) * ( width / 2 / 2 );
+
+            next.visible = false;
+
+            addPage( next , !isBindingRight , function( page : PageComponent ) : void {
+                var front : PageComponent = isForward ? next : prevFore;
                 var back : PageComponent = isForward ? prevRear : next;
-               // var back : PageComponent = null;
                 var removeOnBegin : PageComponent = isForward ? prevRear : prevFore;
                 var removeOnEnd : PageComponent = isForward ? prevFore : prevRear;
-					
-				if(!hasNextPage)
-				{
-					trace("dont has next page!");
-					//front = null;
-					//back = next;
-				}
-				
-				trace("front : " + front);
-				trace("back : " + back);
-				trace("removeOnBigin : " + removeOnBegin);
-				trace("removeOnEnd : " + removeOnEnd);
+
                 isAnimating = true;
+
                 startFlip( front , back , isForward , function() : void {
-					
-					next.visible = false;
-					
                     if ( _ui.wrapper.contains( removeOnBegin ) ) {
                         _ui.wrapper.removeElement( removeOnBegin );
                     }
-               	} , function() : void {
+                } , function() : void {
                     if ( _ui.wrapper.contains( removeOnEnd ) ) {
                         _ui.wrapper.removeElement( removeOnEnd );
-					}
-					
-					next.initSelection();
+                    }
+
+                    next.initSelection();
                     next.clearEmphasize();
-					next.visible = true;
+
                     changePageCleanUp();
 
+                    if ( isForward == isBindingRight ) {
+                        _ui.scroller.x += width / 2;
+                    }
+
+                    next.visible = true;
+
                     isAnimating = false;
-               } , deltaX );
-           } , true );
+                } , dx );
+            } , true );
         }
 
         private function changePage2to2( head : int , docPos : int ) : void {
             var isForward : Boolean = docPos > _currentDocPos || docPos >= _currentDocPos && head > _currentHead;
 
-            var prevFore : PageComponent = getCurrentForePage();
-            var prevRear : PageComponent = getCurrentRearPage();
-
-            var prevDocPos : int = _currentDocPos;
-            var prevHead : int = _currentHead;
+            var prevFore : PageComponent = currentForePage;
+            var prevRear : PageComponent = currentRearPage;
 
             _currentDocPos = docPos;
             currentHead = head;
-            var nextFore : PageComponent = getCurrentForePage();
-            var nextRear : PageComponent = getCurrentRearPage();
+            var nextFore : PageComponent = currentForePage;
+            var nextRear : PageComponent = currentRearPage;
 
-            if ( !nextFore ) {
-                loadPage( _pageHeadHelpers[ docPos ].headToPage( head ) , function( page : PageComponent ) : void {
-                	
-                    changePage2to2( head , docPos );
-                } );
-				
-                _currentDocPos = prevDocPos;
-                currentHead = prevHead;
-                return;
-            }
-
-            if ( !nextRear ) {
-                loadPage( _pageHeadHelpers[ docPos ].headToPage( head ) + 1 , function( page : PageComponent ) : void {
-                    changePage2to2( head , docPos );
-                } );
-
-                _currentDocPos = prevDocPos;
-                currentHead = prevHead;
-                return;
-            }
             nextFore.scale = nextRear.scale = _ui.wrapper.scaleX;
+
+            var hide : PageComponent = isForward ? nextFore : nextRear;
+            hide.visible = false;
 
             addPage( nextFore , true , function( page : PageComponent ) : void {
                 addPage( nextRear , false , function( page : PageComponent ) : void {
-                    var front : PageComponent = isForward == flow ? nextFore : prevFore;
-                    var back : PageComponent = isForward == flow ? prevRear : nextRear;
-                    var removeOnBegin : PageComponent = isForward == flow ? prevRear : prevFore;
-                    var removeOnEnd : PageComponent = isForward == flow ? prevFore : prevRear;
+                    var front : PageComponent = isForward ? nextFore : prevFore;
+                    var back : PageComponent = isForward ? prevRear : nextRear;
+                    var removeOnBegin : PageComponent = isForward ? prevRear : prevFore;
+                    var removeOnEnd : PageComponent = isForward ? prevFore : prevRear;
 
                     isAnimating = true;
-                    if(isForward == flow) nextFore.visible = false;
-                    else nextRear.visible = false;  
-                    startFlip( front , back , isForward , 
-                    function() : void 
-                    {
-                        if ( removeOnBegin != null && _ui.wrapper.contains( removeOnBegin ) ) {
+
+                    startFlip( front , back , isForward , function() : void {
+                        if ( _ui.wrapper.contains( removeOnBegin ) ) {
                             _ui.wrapper.removeElement( removeOnBegin );
                         }
-                    } , 
-                    function() : void 
-                    {
-                    	nextFore.visible = true;
-                    	nextRear.visible = true;  
-                    	/* nextFore.alpha = nextRear.alpha = 1; */
-                        if ( removeOnEnd != null && _ui.wrapper.contains( removeOnEnd ) ) 
-                        {
+                    } , function() : void {
+                        if ( _ui.wrapper.contains( removeOnEnd ) ) {
                             _ui.wrapper.removeElement( removeOnEnd );
                         }
 
@@ -593,7 +540,9 @@ package jp.archilogic.docnext.ui {
                         nextRear.initSelection();
                         nextRear.clearEmphasize();
 
-                        changePageCleanUp(); 
+                        changePageCleanUp();
+
+                        hide.visible = true;
 
                         isAnimating = false;
                     } );
@@ -611,10 +560,6 @@ package jp.archilogic.docnext.ui {
 
         private function changePageCleanUp() : void {
             loadNeighborPage();
-
-            /*_ui.wrapper.callLater( function() : void {
-                centering();
-            } );*/
         }
 
         private function changePageHandler( page : int ) : void {
@@ -622,11 +567,6 @@ package jp.archilogic.docnext.ui {
         }
 
         private function changeScale() : void {
-            /*var hPos : Number =
-                _ui.scroller.maxHorizontalScrollPosition > 0 ? ( _ui.scroller.horizontalScrollPosition ) / _ui.scroller.maxHorizontalScrollPosition : 0.5;
-            var vPos : Number =
-                _ui.scroller.maxVerticalScrollPosition > 0 ? ( _ui.scroller.verticalScrollPosition ) / _ui.scroller.maxVerticalScrollPosition : 0.5;*/
-            
             var hPos : Number =
                 _ui.wrapper.width > 0 ? ( _ui.wrapper.horizontalScrollPosition ) / _ui.wrapper.width : 0.5;
             var vPos : Number =
@@ -636,10 +576,10 @@ package jp.archilogic.docnext.ui {
 
             _ui.wrapper.scaleX = _ui.wrapper.scaleY = scale;
 
-            getCurrentForePage().scale = scale;
+            currentForePage.scale = scale;
 
-            if ( getCurrentRearPage() ) {
-                getCurrentRearPage().scale = scale;
+            if ( currentRearPage ) {
+                currentRearPage.scale = scale;
             }
 
             _ui.wrapper.callLater( function() : void {
@@ -658,33 +598,36 @@ package jp.archilogic.docnext.ui {
             _ui.arrowIndicator.hasRightFunc = hasRight;
             _ui.arrowIndicator.isAnimatingFunc = isAnimatingFunc;
 
-            /* resizeHelper = new ResizeHelper( this , resizeHandler ); */
             new ResizeHelper( this , resizeHandler );
-            
+
             progress = new ProgressBar();
             progress.indeterminate = true;
             progress.labelPlacement = ProgressBarLabelPlacement.CENTER;
-            
+
             _ui.wrapper.addElement( progress );
-            
+
             progress.x = ( _ui.width - 150 ) / 2;
             progress.y = ( _ui.height - 4 ) / 2;
         }
-        private function set currentHead( value : int ) : * {
-            _currentHead = value;
 
-            var sumToCurrent : int = 0;
-            var sumTotal : int = 0;
-
-            for ( var index : int = 0 ; index < _infos.length ; index++ ) {
-                if ( index < _currentDocPos ) {
-                    sumToCurrent += _infos[ _currentDocPos ].pages;
-                }
-
-                sumTotal += _infos[ _currentDocPos ].pages;
+        private function get currentForePage() : PageComponent {
+            if ( !_pages ) {
+                return null;
             }
 
-            _setPageHandler( _pageHeadHelpers[ _currentDocPos ].headToPage( _currentHead ) + sumToCurrent , sumTotal );
+            return pages[ currentPage ];
+        }
+
+        private function get currentPage() : int {
+            return _pageHeadHelpers[ _currentDocPos ].headToPage( _currentHead );
+        }
+
+        private function get currentRearPage() : PageComponent {
+            if ( !_pages || !pages || _pageHeadHelpers[ _currentDocPos ].isSingleHead( _currentHead ) ) {
+                return null;
+            }
+
+            return pages[ currentPage + 1 ];
         }
 
         private function easeInOutQuart( t : Number ) : Number {
@@ -695,8 +638,12 @@ package jp.archilogic.docnext.ui {
         }
 
         private function fitWrapperSize( page : PageComponent ) : void {
-            if(page == null || _ui == null || page.content == null) return;
+            if ( page == null || _ui == null || page.content == null ) {
+                return;
+            }
+
             var w : int = page.content.width * 2;
+
             if ( _ui.width / w > _ui.height / page.content.height ) {
                 // fit to height
                 _baseScale = _ui.height / page.content.height;
@@ -707,38 +654,21 @@ package jp.archilogic.docnext.ui {
 
             changeScale();
         }
-		
-        private function getCurrentForePage() : PageComponent {
-            if ( !_pages ) {
-                return null;
-            }
 
-            return _pages[ _currentDocPos ][ _pageHeadHelpers[ _currentDocPos ].headToPage( _currentHead ) ];
-        }
-		
         private function getCurrentPages() : Vector.<PageComponent> {
             var ret : Vector.<PageComponent> = new Vector.<PageComponent>();
 
-            ret.push( getCurrentForePage() );
+            ret.push( currentForePage );
 
-            if ( getCurrentRearPage() ) {
-                ret.push( getCurrentRearPage() );
+            if ( currentRearPage ) {
+                ret.push( currentRearPage );
             }
 
             return ret;
         }
-        
-        private function getCurrentRearPage() : PageComponent {
-            if ( !_pages || !_pages[ _currentDocPos ] ||
-                _pageHeadHelpers[ _currentDocPos ].isSingleHead( _currentHead ) ) {
-                return null;
-            }
-
-            return _pages[ _currentDocPos ][ _pageHeadHelpers[ _currentDocPos ].headToPage( _currentHead ) + 1 ];
-        }
 
         private function hasLeft() : Boolean {
-            return flow ? hasNext() : hasPrev();
+            return isBindingRight ? hasNext() : hasPrev();
         }
 
         private function hasNext() : Boolean {
@@ -751,14 +681,10 @@ package jp.archilogic.docnext.ui {
         }
 
         private function hasRight() : Boolean {
-            return flow ? hasPrev() : hasNext();
+            return isBindingRight ? hasPrev() : hasNext();
         }
 
         private function initLoadComplete( page : PageComponent ) : void {
-            currentHead = 0;
-            _currentDocPos = 0;
-            _zoomExponent = 0;
-
             fitWrapperSize( page );
 
             //_mouseEventHelper.scroller = _ui.scroller;
@@ -766,8 +692,10 @@ package jp.archilogic.docnext.ui {
             _mouseEventHelper.arrowIndicator = _ui.arrowIndicator;
             _mouseEventHelper.init( this );
 
-            _ui.wrapper.removeElement( progress );
-            progress = null;
+            if ( progress ) {
+                _ui.wrapper.removeElement( progress );
+                progress = null;
+            }
         }
 
         private function set isAnimating( value : Boolean ) : * {
@@ -784,10 +712,23 @@ package jp.archilogic.docnext.ui {
             return _isAnimating;
         }
 
+        private function loadFullByPage( page : int ) : void {
+            addItemToLoadQueue( page );
+            addItemToLoadQueue( page + 1 );
+            loadNeighborPage();
+
+            if ( !_pageHeadHelpers[ _currentDocPos ].isSingleHead( _pageHeadHelpers[ _currentDocPos ].pageToHead( page ) ) ) {
+                addPage( pages[ page ] , true , function( _p_ : PageComponent ) : void {
+                    addPage( pages[ page + 1 ] , false , initLoadComplete );
+                } );
+            } else {
+                addPage( pages[ page ] , !isBindingRight , initLoadComplete );
+            }
+        }
+
         private function loadHelepr( position : int ) : void {
             if ( position < _dtos.length ) {
                 DocumentService.getInfo( _dtos[ position ].id , function( json : Object ) : void {
-                    //_infos[ position ] = JSON.decode( json );
                     _infos[ position ] = json;
 
                     DocumentService.getSinglePageInfo( _dtos[ position ].id ,
@@ -796,9 +737,7 @@ package jp.archilogic.docnext.ui {
                             new PageHeadHelper( singlePages.toArray() , _infos[ position ].pages );
                         _pages[ position ] = new Vector.<PageComponent>( _infos[ position ].pages );
 
-                        DocumentService.getImageInfo( _dtos[ position ].id ,
-                                                           function( json : Object ) : void {
-                            //_imageInfo = JSON.decode( json );
+                        DocumentService.getImageInfo( _dtos[ position ].id , function( json : Object ) : void {
                             _imageInfo = json;
 
                             loadHelepr( position + 1 );
@@ -806,28 +745,13 @@ package jp.archilogic.docnext.ui {
                     } );
                 } );
             } else {
+                currentHead = 0;
+                _currentDocPos = 0;
+                _zoomExponent = 0;
+
                 _loadingCount = 0;
 
-                loadPage( 0 , function( page : PageComponent ) : void {
-                    if ( _infos[ 0 ].pages > 1 && !_pageHeadHelpers[ 0 ].isSingleHead( 0 ) ) {
-                        addPage( page , true , function( page_ : PageComponent ) : void {
-                            loadPage( 1 , function( page__ : PageComponent ) : void {
-                                addPage( page__ , false , initLoadComplete );
-                            } );
-                        } );
-                    } else {
-                        addPage( page , false , function( page_ : PageComponent ) : void {
-                            if ( _infos[ 0 ].pages > 1 ) {
-                                loadPage( 1 );
-                            }
-
-                            initLoadComplete( page_ );
-                        } );
-                    }
-                } );
-
-                loadPage( 2 );
-                loadPage( 3 );
+                loadFullByPage( 0 );
             }
         }
 
@@ -835,79 +759,77 @@ package jp.archilogic.docnext.ui {
          * Ignore neighbor document, currently
          */
         private function loadNeighborPage() : void {
-            var page : int = _pageHeadHelpers[ _currentDocPos ].headToPage( _currentHead );
+            var page : int = currentPage;
 
             for ( var index : int = 0 ; index < _infos[ _currentDocPos ].pages ; index++ ) {
-                if ( index < page - 2 || index > page + 7 ) {
-                    delete _pages[ _currentDocPos ][ index ];
-                    _pages[ _currentDocPos ][ index ] = null;
+                if ( index < page - 4 || index > page + 9 ) {
+                    delete pages[ index ];
+                    pages[ index ] = null;
                 }
             }
 
-            loadPage( page + 2 );
-            loadPage( page + 3 );
-            loadPage( page - 1 );
-            loadPage( page - 2 );
-            loadPage( page + 4 );
-            loadPage( page + 5 );
-            loadPage( page - 3 );
-            loadPage( page - 4 );
-            loadPage( page + 6 );
-            loadPage( page + 7 );
-            loadPage( page - 5 );
-            loadPage( page - 6 );
+            addItemToLoadQueue( page + 2 );
+            addItemToLoadQueue( page + 3 );
+            addItemToLoadQueue( page - 1 );
+            addItemToLoadQueue( page - 2 );
+            addItemToLoadQueue( page + 4 );
+            addItemToLoadQueue( page + 5 );
+            addItemToLoadQueue( page - 3 );
+            addItemToLoadQueue( page - 4 );
+            addItemToLoadQueue( page + 6 );
+            addItemToLoadQueue( page + 7 );
+            addItemToLoadQueue( page + 8 );
+            addItemToLoadQueue( page + 9 );
+
+            loadQueueHeadPage();
         }
 
         private function loadPage( index : int , next : Function = null ) : void {
-            if ( index >= 0 && index < _infos[ _currentDocPos ].pages && !_pages[ _currentDocPos ][ index ] ) {
+            var page : int = currentPage;
+
+            if ( index >= 0 && index < _infos[ _currentDocPos ].pages && !( index < page - 4 || index > page + 9 ) &&
+                pages[ index ] && !pages[ index ].loading && !pages[ index ].loaded ) {
                 _loadingCount++;
 
-				var level : int = 1;
-                var currentDocId : Number = docId;
-				var currentRatio : Number = ratio;
-				var contentWidth : int = _imageInfo.width;
-				var contentHeight : int = _imageInfo.height;
-                var isUseActual : Boolean = level != _imageInfo.maxLevel || !_imageInfo.isUseActualSize;
-                
-                //Alert.show("_imageInfo.height : " + _imageInfo.height);
-				
-                DocumentLoadUtil.loadPageSource( currentDocId , index , level, 
-											contentWidth , contentHeight , isUseActual ,
-                                            function( pageSource : BitmapData ) : void {
+                var pc : PageComponent = pages[ index ];
+
+                pc.loadAll( docId , ratio , TEXTURE_LEVEL , calcMainPageSize() , _contextMenuHelper ,
+                            _mouseEventHelper.isMenuVisbleFunc , changePageHandler , function() : void {
                     _loadingCount--;
-					
-					var page : PageComponent = new PageComponent (index);
-					page.loadData(pageSource);
-					
-					page.docId = currentDocId;
-					page.ratio = currentRatio;
-					page.contextMenuHelper = _contextMenuHelper;
-					page.isMenuVisbleFunc = _mouseEventHelper.isMenuVisbleFunc;
-					page.changePageHandler = changePageHandler;
-					pages[ index ]  = page;
-					
-					DocumentLoadUtil.loadRegions(page);
-					
+
                     if ( next != null ) {
-                        next( page );
+                        next( pc );
                     }
                 } );
+            } else {
+                if ( next != null ) {
+                    next( null );
+                }
             }
         }
-        
-		/*  public function hasCache(index : int ) : Boolean
-		{
-			var page : PageComponent = _pages[_currentDocPos ][index];
-			if( page != null && page.source !=null && page.bitmapData != null)
-				return true;
-			return false;
-		}  */
+
+        private function loadQueueHeadPage() : void {
+            if ( _loadingCount > 0 ) {
+                return;
+            }
+
+            if ( _loadQueue.length == 0 ) {
+                return;
+            }
+
+            var page : int = _loadQueue.shift();
+
+            loadPage( page , function( pc : PageComponent ) : void {
+                loadQueueHeadPage();
+            } );
+        }
+
         private function moveLeft() : void {
-            flow ? moveToNextPage() : moveToPrevPage();
+            isBindingRight ? moveToNextPage() : moveToPrevPage();
         }
 
         private function moveRight() : void {
-            flow ? moveToPrevPage() : moveToNextPage();
+            isBindingRight ? moveToPrevPage() : moveToNextPage();
         }
 
         private function moveToNextPage() : void {
@@ -932,31 +854,43 @@ package jp.archilogic.docnext.ui {
             if ( page ) {
                 return page.bitmapData;
             } else {
-                var current : PageComponent = getCurrentForePage();
-                return new BitmapData( current.width , current.height , true , 0 );
+                // may cause error when current == null
+                var current : PageComponent = currentForePage;
+                return new BitmapData( current.width , current.height );
             }
         }
 
         private function pageRectHandler() : Rectangle {
             return new Rectangle( _ui.scroller.x , _ui.scroller.y ,
-                                  Math.min( _ui.arrowIndicator.width - _ui.scroller.x , _ui.wrapper.contentWidth * _ui.wrapper.scaleX ) ,
-                                  Math.min( _ui.arrowIndicator.height - _ui.scroller.y , _ui.wrapper.contentHeight * _ui.wrapper.scaleY ) );
+                                  Math.min( _ui.arrowIndicator.width - _ui.scroller.x ,
+                                            _ui.wrapper.contentWidth * _ui.wrapper.scaleX ) ,
+                                  Math.min( _ui.arrowIndicator.height - _ui.scroller.y ,
+                                            _ui.wrapper.contentHeight * _ui.wrapper.scaleY ) );
         }
 
         private function resizeHandler() : void {
-        	if(this.visible == false ) return;
-        	if(_ui == null ) return;
-            if ( getCurrentForePage() ) {
-                fitWrapperSize( getCurrentForePage() );
+            if ( !visible ) {
+                return;
+            }
+
+            if ( !_ui ) {
+                return;
+            }
+
+            if ( currentForePage ) {
+                fitWrapperSize( currentForePage );
             }
         }
 
+        /**
+         * Perform in region (0,0)-(page.width*2,page.height)
+         */
         private function startFlip( front : PageComponent , back : PageComponent , isForward : Boolean ,
                                     beginFlip : Function , endFlip : Function , deltaX : Number = 0 ) : void {
             var N_STEP : int = 12;
 
-            var w : Number = getCurrentForePage().width;
-            var h : Number = getCurrentForePage().height;
+            var w : Number = currentForePage.width;
+            var h : Number = currentForePage.height;
 
             var render : Shape = new Shape();
             var wrapper : UIComponent = new UIComponent();
@@ -966,23 +900,26 @@ package jp.archilogic.docnext.ui {
 
             var initX : Number = _ui.scroller.x;
 
+            var l : PageComponent = isBindingRight ? front : back;
+            var r : PageComponent = isBindingRight ? back : front;
+
             var step : int = 0;
             systemManager.addEventListener( Event.ENTER_FRAME , function( e : Event ) : void {
                 if ( step < N_STEP ) {
-                    var sign : int = isForward == flow ? 1 : -1;
+                    _ui.scroller.viewport.clipAndEnableScrolling = false;
+
+                    var sign : int = isForward == isBindingRight ? 1 : -1;
 
                     render.graphics.clear();
                     var t : Number = easeInOutQuart( step / ( N_STEP - 1 ) );
                     var point : Point =
-                        calcBezierPoint( new Point( -w * sign , h ) , new Point( w * sign , h ) ,
-                                                    new Point( w / 2 * sign , 0 ) , t );
+                        calcBezierPoint( new Point( -w * sign , h ) , new Point( w * sign , h ) , new Point( 0 , 0 ) ,
+                                                    t );
                     var o : Object = PageFlip.computeFlip( point , new Point( 1 , 1 ) , w , h , true , 1 );
-                    PageFlip.drawBitmapSheet( o , render , nullSafeGetBitmapData( front ) ,
-                                              nullSafeGetBitmapData( back ) );
+
+                    PageFlip.drawBitmapSheet( o , render , nullSafeGetBitmapData( l ) , nullSafeGetBitmapData( r ) );
 
                     _ui.scroller.x = initX + t * deltaX;
-                    
-                    //Alert.show( "x : " + _ui.scroller.x + "\ninitX : " + initX + "\nt : " + t + "\ndelta : " + deltaX );
 
                     if ( step == 0 ) {
                         beginFlip();
@@ -997,8 +934,16 @@ package jp.archilogic.docnext.ui {
                     //_ui.scroller.x = calcCenterX( _ui.wrapper.contentWidth * _ui.wrapper.scaleX );
 
                     endFlip();
+
+                    _ui.scroller.viewport.clipAndEnableScrolling = true;
                 }
             } );
+        }
+
+        private function zoom() : void {
+            _zoomExponent = _zoomExponent == 4 ? 0 : Math.min( _zoomExponent + 2 , 4 );
+
+            changeScale();
         }
     }
 }

@@ -16,7 +16,6 @@ package jp.archilogic.docnext.ui {
         }
 
         private var _label : Label;
-
         private var _total : uint;
 
         public function set current( value : uint ) : void {

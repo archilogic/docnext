@@ -3,8 +3,9 @@ package jp.archilogic.docnext.helper {
 
     public class PageHeadHelper {
         public function PageHeadHelper( singlePages : Array , pages : int ) {
-			_pageLength = pages;
-			_singlePages = singlePages;
+            _pageLength = pages;
+            _singlePages = singlePages;
+
             for ( var page : int = 0 ; page < pages ;  ) {
                 _heads.push( page );
 
@@ -18,40 +19,42 @@ package jp.archilogic.docnext.helper {
                 }
             }
         }
-		private var _pageLength:int ;
-		private var _singlePages:Array ; 
+
         private var _heads : Vector.<int> = new Vector.<int>();
         private var _isSingleHead : Vector.<Boolean> = new Vector.<Boolean>();
+        private var _pageLength : int;
+        private var _singlePages : Array;
 
         public function headToPage( head : int ) : int {
             return _heads[ head ];
         }
 
+        public function isFore( page : int ) : Boolean {
+            var value : Boolean;
+
+            if ( isSingleHeadByPage( page ) ) {
+                value = true;
+            } else {
+                var head : int = pageToHead( page );
+                var forePageIndex : int = headToPage( head );
+                value = page == forePageIndex ? true : false;
+
+                if ( forePageIndex != page && ( forePageIndex + 1 ) != page ) {
+                    throw new ArgumentError( "PageHeadHelper.isFore(page:int):Boolean has bug" );
+                }
+
+            }
+            return value;
+        }
+
         public function isSingleHead( head : int ) : Boolean {
             return _isSingleHead[ head ];
         }
-		
-		public function isSingleHeadByPage( page : int ) : Boolean {
-			return isSinglePage(page, _singlePages);
-		}
-		
-		public function isFore( page : int ) : Boolean {
-			var value : Boolean ;
-			if(isSingleHeadByPage(page)) {
-				value = true;
-			}
-			else {
-				var head : int = pageToHead( page );
-				var forePageIndex : int = headToPage( head );
-				value = page == forePageIndex ? true : false;
-				
-				if( forePageIndex != page && (forePageIndex + 1) != page ) {
-					throw new ArgumentError("PageHeadHelper.isFore(page:int):Boolean has bug");
-				}
-					
-			}
-			return value;
-		}
+
+        public function isSingleHeadByPage( page : int ) : Boolean {
+            return isSinglePage( page , _singlePages );
+        }
+
         public function isValidHead( head : int ) : Boolean {
             return head >= 0 && head < _heads.length;
         }
@@ -59,11 +62,11 @@ package jp.archilogic.docnext.helper {
         public function get length() : int {
             return _heads.length;
         }
-		
-		public function get pageLength() : int {
-			return _pageLength;
-		}
-		
+
+        public function get pageLength() : int {
+            return _pageLength;
+        }
+
         public function pageToHead( page : int ) : int {
             for ( var head : int = 0 ; head < _heads.length ; head++ ) {
                 var headPage : int = _heads[ head ];

@@ -1,26 +1,22 @@
 package jp.archilogic.docnext.helper {
-    import __AS3__.vec.Vector;
-    
     import flash.events.MouseEvent;
     import flash.geom.Point;
     import flash.geom.Rectangle;
     import flash.net.SharedObject;
     import flash.utils.Dictionary;
-    
-    import jp.archilogic.docnext.ui.Balloon;
-    import jp.archilogic.docnext.ui.PageComponent;
-    
     import mx.containers.Canvas;
     import mx.events.FlexEvent;
+    import __AS3__.vec.Vector;
+    import jp.archilogic.docnext.ui.Balloon;
+    import jp.archilogic.docnext.ui.PageComponent;
 
     public class OverlayHelper {
-        private static const ALPHA_NORMAL : Number = 0.3;
         private static const ALPHA_EMPHASIZE : Number = 0.8;
-
-        private static const KEY_TOP : String = 'top';
+        private static const ALPHA_NORMAL : Number = 0.3;
         private static const KEY_BOTTOM : String = 'bottom';
         private static const KEY_LEFT : String = 'left';
         private static const KEY_RIGHT : String = 'right';
+        private static const KEY_TOP : String = 'top';
 
         public function OverlayHelper( container : PageComponent ) {
             _container = container;
@@ -28,36 +24,26 @@ package jp.archilogic.docnext.helper {
             _annotationHelper = new OverlayAnnotationHelper( container , convertToStageRect );
         }
 
-        private var _container : PageComponent;
-
         private var _annotationHelper : OverlayAnnotationHelper;
+        private var _balloons : Dictionary /* of <int,Balloon> */ = new Dictionary();
+        private var _bar : Number = 0;
+        private var _container : PageComponent;
         private var _contextMenuHelper : ContextMenuHelper;
-
-        private var _docId : Number;
-        private var _page : int;
-        private var _level : int;
-
-        private var _regions : Vector.<Rectangle> = null;
-        private var _ratio : Number;
-        private var _text : String;
-
-        private var _currentSelections : Dictionary /* of Indicator */;
+        private var _currentHighlightIndex : int = -1;
         private var _currentSelectionBegin : int;
         private var _currentSelectionEnd : int;
-
-        private var _highlightInfos : Vector.<Object> /* of Object{begin,end,color,comment} */ = new Vector.<Object>();
-        private var _currentHighlightIndex : int = -1;
-
-        private var _highlights : Dictionary /* of <int,Dictionary<int,Indicator>> */ = new Dictionary();
-
-        private var _balloons : Dictionary /* of <int,Balloon> */ = new Dictionary();
-
-        private var _scale : Number;
-
-        private var _isMenuVisibleFunc : Function;
-
+        private var _currentSelections : Dictionary /* of Indicator */;
+        private var _docId : Number;
         private var _foo : Number = 0;
-        private var _bar : Number = 0;
+        private var _highlightInfos : Vector.<Object> /* of Object{begin,end,color,comment} */ = new Vector.<Object>();
+        private var _highlights : Dictionary /* of <int,Dictionary<int,Indicator>> */ = new Dictionary();
+        private var _isMenuVisibleFunc : Function;
+        private var _level : int;
+        private var _page : int;
+        private var _ratio : Number;
+        private var _regions : Vector.<Rectangle> = null;
+        private var _scale : Number;
+        private var _text : String;
 
         public function set annotation( value : Array ) : * {
             _annotationHelper.annotation = value;
@@ -173,6 +159,13 @@ package jp.archilogic.docnext.helper {
             _isMenuVisibleFunc = value;
         }
 
+        public function get level() : int {
+            return _level;
+        }
+
+        public function set level( value : int ) : void {
+            _level = value;
+        }
 
         public function get page() : int {
             return _page;
@@ -180,14 +173,6 @@ package jp.archilogic.docnext.helper {
 
         public function set page( value : int ) : * {
             _page = value;
-        }
-
-        public function get level() : int {
-            return _level;
-        }
-
-        public function set level( value : int ) : void {
-            _level = value;
         }
 
         public function set ratio( value : Number ) : * {
@@ -234,6 +219,10 @@ package jp.archilogic.docnext.helper {
             _currentHighlightIndex = -1;
         }
 
+        public function get scale() : Number {
+            return _scale;
+        }
+
         public function set scale( value : Number ) : * {
             _scale = value;
 
@@ -277,7 +266,6 @@ package jp.archilogic.docnext.helper {
         public function set text( value : String ) : * {
             _text = value;
         }
-
 
         private function addBalloon( comment : String , index : int ) : void {
             var met : Object = calcHighlightMetrics( index );

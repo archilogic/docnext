@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Box xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:ui="jp.archilogic.docnext.ui.*"
+        xmlns:code="http://code.google.com/p/flexlib/" width="100%" height="100%"
+        >
+    <mx:Script>
+        <![CDATA[
+            import jp.archilogic.docnext.resource.Resource;
+        ]]>
+    </mx:Script>
+    <mx:Box horizontalAlign="center" verticalAlign="middle" width="100%" height="100%">
+        <mx:Label text="コンテンツ保護のために表示を制限させていただいております。" fontSize="20" textAlign="center" />
+        <mx:Label text="画面内をクリックするとデジタル雑誌をご覧いただけます。" fontSize="20" textAlign="center" />
+    </mx:Box>
+</mx:Box>

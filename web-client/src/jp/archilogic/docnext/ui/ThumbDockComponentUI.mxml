@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:ui="jp.archilogic.docnext.ui.*" width="100%" height="100%"
            horizontalScrollPolicy="off" verticalScrollPolicy="off">
-     <mx:Canvas id="scroller" width="100%" height="100%" minWidth="0" minHeight="0">
-            <mx:UIComponent id="wrapper" />
-            <mx:Label id="pageLabel" fontSize="16" x="300" />
-            <mx:HScrollBar id="hScrollbar" width="280"/>
-     </mx:Canvas>
+    <mx:Canvas id="scroller" width="100%" height="100%" minWidth="0" minHeight="0">
+        <mx:UIComponent id="wrapper" />
+        <mx:Label id="pageLabel" fontSize="16" x="300" />
+        <mx:HScrollBar id="hScrollbar" width="280" />
+    </mx:Canvas>
     <!--</ui:DocumentComponentArrowIndicator>-->
 </mx:Canvas>
