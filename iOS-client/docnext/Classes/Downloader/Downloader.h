@@ -9,13 +9,13 @@
 #import <Foundation/Foundation.h>
 #import "DownloaderTypes.h"
 
-#define DOWNLOADER_PROGRESS @"docnext_downloader_progress"
-#define DOWNLOADER_COMPLETE @"docnext_downloader_complete"
-#define DOWNLOADER_FAILED @"docnext_downloader_failed"
+extern NSString* const DOWNLOADER_PROGRESS;
+extern NSString* const DOWNLOADER_COMPLETE;
+extern NSString* const DOWNLOADER_FAILED;
 
-#define DOWNLOADER_IMAGE_INIT_DOWNLOADED @"docnext_downloader_image_init_downloaded"
-#define DOWNLOADER_TEXTURE_PROGRESS @"docnext_downloader_texture_progress"
-#define DOWNLOADER_ANNOTATION_PROGRESS @"docnext_downloader_annotation_progress"
+extern NSString* const DOWNLOADER_IMAGE_INIT_DOWNLOADED;
+extern NSString* const DOWNLOADER_TEXTURE_PROGRESS;
+extern NSString* const DOWNLOADER_ANNOTATION_PROGRESS;
 
 @interface Downloader : NSObject
 
@@ -23,10 +23,9 @@
 
 - (void)start;
 - (void)stop;
-- (void)addItem:(NSString *)docId permitType:(DownloaderPermitType)permitType saveLimit:(DownloaderSaveLimit)saveLimit endpoint:(NSString *)endpoint insertPosition:(DownloaderInsertPosition)insertPosition;
+- (void)addItem:(NSString *)docId permitType:(DownloaderPermitType)permitType saveLimit:(DownloaderSaveLimit)saveLimit endpoint:(NSString *)endpoint insertPosition:(DownloaderInsertPosition)insertPosition title:(NSString *)title;
 - (void)removeItem:(NSString *)docId;
 - (void)suspendItem:(NSString *)docId;
-- (void)resumeItem:(NSString *)docId;
 - (NSArray *)list;
 - (void)sort:(NSArray *)docIds;
 

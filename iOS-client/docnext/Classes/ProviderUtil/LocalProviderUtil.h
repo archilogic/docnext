@@ -25,5 +25,7 @@
 + (int)lastOpenedPage:(NSString *)docId;
 + (void)setLastOpenedPage:(NSString *)docId page:(int)page;
 + (NSArray *)annotation:(NSString *)docId page:(int)page;
++ (NSMutableArray *)downloaderInfo;
++ (void)setDownloaderInfo:(NSArray *)info;
 
 @end

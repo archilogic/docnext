@@ -18,9 +18,4 @@
 + (BOOL)exists:(NSString *)path;
 + (void)touch:(NSString *)path;
 
-/*+ (NSData *)read:(NSString *)path;
-+ (BOOL)write:(NSData *)data toFile:(NSString *)path;
-+ (BOOL)remove:(NSString *)path;
- */
-
 @end

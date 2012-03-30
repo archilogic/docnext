@@ -76,10 +76,20 @@
 }
 
 - (GLubyte *)loadJpeg {
+    NSError* err = nil;
+    
     NSNumber* p = AT([[LocalProviderUtil imageInfo:self.docId] toPortraitPage:[LocalProviderUtil info:self.docId]], self.page);
     NSString* path = [FileUtil fullPath:[LocalPathUtil imageTexturePath:self.docId page:p.intValue level:self.level px:self.px py:self.py isWebp:self.isWebp]];
     
-    UIImage* image = [UIImage imageWithData:[NSData dataWithContentsOfFile:path]];
+    NSData* raw = [[NSData alloc] initWithContentsOfFile:path options:0 error:&err];
+    if (err) {
+        NSLog(@"Error: %@", err);
+        assert(0);
+    }
+
+    UIImage* image = [[UIImage alloc] initWithData:raw];
+    
+    [raw release];
     
     GLubyte* data = (GLubyte *)malloc(TEXTURE_SIZE * TEXTURE_SIZE * 4);
     
@@ -90,6 +100,9 @@
     CGColorSpaceRelease(colorSpace);
     
     CGContextDrawImage(ctx, CGRectMake(0, 0, TEXTURE_SIZE, TEXTURE_SIZE), imageRef);
+    
+    [image release];
+
     CGContextRelease(ctx);
     
     GLubyte* rgb = malloc(TEXTURE_SIZE * TEXTURE_SIZE * 2);
@@ -101,11 +114,17 @@
 }
 
 - (GLubyte *)loadWebp {
+    NSError* err = nil;
+    
     NSNumber* p = AT([[LocalProviderUtil imageInfo:self.docId] toPortraitPage:[LocalProviderUtil info:self.docId]], self.page);
     NSString* path = [FileUtil fullPath:[LocalPathUtil imageTexturePath:self.docId page:p.intValue level:self.level px:self.px py:self.py isWebp:self.isWebp]];
     
-    NSData* data = [NSData dataWithContentsOfFile:path];
-    
+    NSData* data = [NSData dataWithContentsOfFile:path options:0 error:&err];
+    if (err) {
+        NSLog(@"Error: %@", err);
+        assert(0);
+    }
+
     WebPDecoderConfig config;
     if (!WebPInitDecoderConfig(&config)) {
         assert(0);
@@ -132,38 +151,40 @@
 }
 
 - (void)main {
-    if (self.abort) {
-        return;
+    @autoreleasepool {
+        if (self.abort) {
+            return;
+        }
+        
+        NSNumber* p = AT([[LocalProviderUtil imageInfo:self.docId] toPortraitPage:[LocalProviderUtil info:self.docId]], self.page);
+        
+        if ((NSNull *)p == [NSNull null]) {
+            return;
+        }
+        
+        NSString* path = [LocalPathUtil imageTexturePath:self.docId page:p.intValue level:self.level px:self.px py:self.py isWebp:self.isWebp];
+        
+        if (![FileUtil exists:path]){
+            return;
+        }
+        
+        if (self.page < self.pageHolder.page - self.threshold || page > self.pageHolder.page + self.threshold) {
+            return;
+        }
+        
+        if (self.abort) {
+            return;
+        }
+        
+        GLubyte* data = self.isWebp ? self.loadWebp : self.loadJpeg;
+        
+        if (self.abort || self.page < self.pageHolder.page - self.threshold || page > self.pageHolder.page + self.threshold) {
+            free(data);
+            return;
+        }
+        
+        [self.binder bind:[BindQueueItem itemWithParam:self.page level:self.level px:self.px py:self.py data:data]];
     }
-    
-    NSNumber* p = AT([[LocalProviderUtil imageInfo:self.docId] toPortraitPage:[LocalProviderUtil info:self.docId]], self.page);
-    
-    if ((NSNull *)p == [NSNull null]) {
-        return;
-    }
-    
-    NSString* path = [LocalPathUtil imageTexturePath:self.docId page:p.intValue level:self.level px:self.px py:self.py isWebp:self.isWebp];
-    
-    if (![FileUtil exists:path]){
-        return;
-    }
-    
-    if (self.page < self.pageHolder.page - self.threshold || page > self.pageHolder.page + self.threshold) {
-        return;
-    }
-    
-    if (self.abort) {
-        return;
-    }
-
-    GLubyte* data = self.isWebp ? self.loadWebp : self.loadJpeg;
-    
-    if (self.abort || self.page < self.pageHolder.page - self.threshold || page > self.pageHolder.page + self.threshold) {
-        free(data);
-        return;
-    }
-    
-    [self.binder bind:[BindQueueItem itemWithParam:self.page level:self.level px:self.px py:self.py data:data]];
 }
 
 #pragma mark public

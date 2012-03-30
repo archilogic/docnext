@@ -138,9 +138,9 @@
     }
 }
 
-- (void)calcScale:(float)scale matrix:(ImageMatrix *)matrix surface:(CGSize)surface page:(CGSize)page padding:(CGSize)padding nx:(int)nx {
+- (void)calcScale:(float)scale tx:(float)tx ty:(float)ty matrix:(ImageMatrix *)matrix {
     [self.srcMat set:matrix];
-    [self.dstMat set:scale tx:surface.width - page.width * scale * nx ty:0];
+    [self.dstMat set:scale tx:tx ty:ty];
     
     self.shouldAdjust = YES;
     self.start = CFAbsoluteTimeGetCurrent();

@@ -47,7 +47,16 @@
     return YES;
 }
 
-- (void)launch:(NSString *)docId endpiont:(NSString *)endpoint permitType:(DownloaderPermitType)permitType saveLimit:(DownloaderSaveLimit)saveLimit {
+- (void)launch:(NSString *)docId endpiont:(NSString *)endpoint permitType:(DownloaderPermitType)permitType saveLimit:(DownloaderSaveLimit)saveLimit title:(NSString *)title {
+    if (![LocalProviderUtil isCompleted:docId] && ![[[Downloader instance] list] containsObject:docId] && ![LocalProviderUtil isImageInitDownloaded:docId]) {
+        [[Downloader instance] addItem:docId
+                            permitType:permitType
+                             saveLimit:saveLimit
+                              endpoint:endpoint
+                        insertPosition:DownloaderInsertPositionTail
+                                 title:title];
+    }
+
     LoaderViewController* vc = [[[LoaderViewController alloc] init] autorelease];
     
     vc.docId = docId;
@@ -59,12 +68,6 @@
     // setStatusBarHidden in ImageViewController seems not to work correctly...
     [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationSlide];
     [self.navigationController pushViewController:vc animated:NO];
-}
-
-- (void)didReceiveMemoryWarning {
-    [super didReceiveMemoryWarning];
-
-    [[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"error_dialog_title", @"") message:NSLocalizedString(@"memory_error_dialog_message", @"") delegate:nil cancelButtonTitle:NSLocalizedString(@"ok", @"") otherButtonTitles:nil] autorelease] show];
 }
 
 - (IBAction)clearButtonClick:(id)sender {
@@ -102,8 +105,9 @@
     NSString* endpoint = [demo objectForKey:@"endpoint"];
     DownloaderPermitType permitType = [[demo objectForKey:@"permitType"] isEqualToString:@"1"] ? DownloaderPermitTypeFull : DownloaderPermitTypeSample;
     DownloaderSaveLimit saveLimit = [[demo objectForKey:@"saveLimit"] isEqualToString:@"1"] ? DownloaderSaveLimitCanSave : DownloaderSaveLimitCannotSave;
+    NSString *title = [demo objectForKey:@"name"];
     
-    [self launch:docId endpiont:endpoint permitType:permitType saveLimit:saveLimit];
+    [self launch:docId endpiont:endpoint permitType:permitType saveLimit:saveLimit title:title];
 }
 
 @end

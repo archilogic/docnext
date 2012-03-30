@@ -15,19 +15,19 @@
 @synthesize saveLimit;
 @synthesize endpoint;
 @synthesize insertPosition;
-@synthesize suspend;
 @synthesize sequence;
+@synthesize title;
 
-- (id)initWithParam:(NSString *)p_docId permitType:(DownloaderPermitType)p_permitType saveLimit:(DownloaderSaveLimit)p_saveLimit endpoint:(NSString *)p_endpoint insertPosition:(DownloaderInsertPosition)p_insertPosition {
+- (id)initWithParam:(NSString *)aDocId permitType:(DownloaderPermitType)aPermitType saveLimit:(DownloaderSaveLimit)aSaveLimit endpoint:(NSString *)aEndpoint insertPosition:(DownloaderInsertPosition)aInsertPosition title:(NSString *)aTitle {
     self = [super init];
     
     if (self) {
-        self.docId = p_docId;
-        self.permitType = p_permitType;
-        self.saveLimit = p_saveLimit;
-        self.endpoint = p_endpoint;
-        self.insertPosition = p_insertPosition;
-        self.suspend = NO;
+        self.docId = aDocId;
+        self.permitType = aPermitType;
+        self.saveLimit = aSaveLimit;
+        self.endpoint = aEndpoint;
+        self.insertPosition = aInsertPosition;
+        self.title = aTitle;
         self.sequence = 0;
     }
     
@@ -43,7 +43,7 @@
         self.saveLimit = [decoder decodeIntForKey:@"saveLimit"];
         self.endpoint = [decoder decodeObjectForKey:@"endpoint"];
         self.insertPosition = [decoder decodeIntForKey:@"insertPosition"];
-        self.suspend = [decoder decodeBoolForKey:@"suspend"];
+        self.title = [decoder decodeObjectForKey:@"title"];
         self.sequence = [decoder decodeIntForKey:@"sequence"];
     }
     
@@ -56,13 +56,14 @@
     [encoder encodeInt:self.saveLimit forKey:@"saveLimit"];
     [encoder encodeObject:self.endpoint forKey:@"endpoint"];
     [encoder encodeInt:self.insertPosition forKey:@"insertPosition"];
-    [encoder encodeBool:self.suspend forKey:@"suspend"];
+    [encoder encodeObject:self.title forKey:@"title"];
     [encoder encodeInt:self.sequence forKey:@"sequence"];
 }
 
 - (void)dealloc {
     self.docId = nil;
     self.endpoint = nil;
+    self.title = nil;
     
     [super dealloc];
 }
@@ -81,10 +82,14 @@
     return [self.docId isEqualToString:other.docId];
 }
 
+- (NSString *)description {
+    return [NSString stringWithFormat:@"<DownloaderItem: docId: %@>", self.docId];
+}
+
 #pragma mark public
 
-+ (DownloaderItem *)itemWithParam:(NSString *)docId permitType:(DownloaderPermitType)permitType saveLimit:(DownloaderSaveLimit)saveLimit endpoint:(NSString *)endpoint insertPosition:(DownloaderInsertPosition)insertPosition {
-    return [[[DownloaderItem alloc] initWithParam:docId permitType:permitType saveLimit:saveLimit endpoint:endpoint insertPosition:insertPosition] autorelease];
++ (DownloaderItem *)itemWithParam:(NSString *)docId permitType:(DownloaderPermitType)permitType saveLimit:(DownloaderSaveLimit)saveLimit endpoint:(NSString *)endpoint insertPosition:(DownloaderInsertPosition)insertPosition title:(NSString *)title {
+    return [[[DownloaderItem alloc] initWithParam:docId permitType:permitType saveLimit:saveLimit endpoint:endpoint insertPosition:insertPosition title:title] autorelease];
 }
 
 @end

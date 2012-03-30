@@ -18,7 +18,15 @@
 #import "DownloaderState.h"
 #import "UIStringTagAlertView.h"
 
-#define WORKING_SIZE 2
+NSString* const DOWNLOADER_PROGRESS = @"downloader_progress";
+NSString* const DOWNLOADER_COMPLETE = @"downloader_complete";
+NSString* const DOWNLOADER_FAILED = @"downloader_failed";
+
+NSString* const DOWNLOADER_IMAGE_INIT_DOWNLOADED = @"downloader_image_init_downloaded";
+NSString* const DOWNLOADER_TEXTURE_PROGRESS = @"downloader_texture_progress";
+NSString* const DOWNLOADER_ANNOTATION_PROGRESS = @"downloader_annotation_progress";
+
+#define WORKING_SIZE 1
 
 @interface Downloader ()
 
@@ -122,7 +130,7 @@ static Downloader* _instance = nil;
     
     [self.lock lock];
     
-    NSMutableArray *queue = [NSKeyedUnarchiver unarchiveObjectWithFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+    NSMutableArray *queue = [LocalProviderUtil downloaderInfo];
     
     if (queue.count == 0) {
         [self.lock unlock];
@@ -131,35 +139,19 @@ static Downloader* _instance = nil;
     }
     
     for (int index = 0; index < self.states.count; index++) {
-        DownloaderState* state = AT(self.states, index);
-        [state retain];
+        DownloaderState* state = [[AT(self.states, index) retain] autorelease];
         
         if (state.didFinished) {
             [self.states removeObjectAtIndex:index];
             [queue removeObject:[self findItemByDocId:queue docId:state.item.docId]];
             
-            [state release];
-
-            [NSKeyedArchiver archiveRootObject:queue toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
-            
-            index--;
-            continue;
-        }
-        
-        if (state.item.suspend) {
-            [self.states removeObjectAtIndex:index];
-            [self findItemByDocId:queue docId:state.item.docId].suspend = YES;
-            
-            [state release];
-            
-            [NSKeyedArchiver archiveRootObject:queue toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+            [LocalProviderUtil setDownloaderInfo:queue];
             
             index--;
             continue;
         }
         
         [state invoke];
-        [state release];
     }
     
     [self.lock unlock];
@@ -168,7 +160,7 @@ static Downloader* _instance = nil;
     while (self.states.count < WORKING_SIZE && qIndex < queue.count) {
         DownloaderItem* item = AT(queue, qIndex++);
         
-        if (item.suspend || [self findStateByItem:self.states item:item]) {
+        if ([self findStateByItem:self.states item:item]) {
             continue;
         }
         
@@ -182,18 +174,55 @@ static Downloader* _instance = nil;
 
 - (void)loop {
     while (true) {
-        NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
-         
-        [self checkFurtherItem];
-        
-        if (!self.isRunning) {
-            break;
+        @autoreleasepool {
+            [self checkFurtherItem];
+            
+            if (!self.isRunning) {
+                break;
+            }
         }
         
-        [pool release];
-        
-        [NSThread sleepForTimeInterval:0.03];
+        [NSThread sleepForTimeInterval:0.1];
     }
+}
+
+- (void)dequeueItem:(NSString *)docId willDelete:(BOOL)willDelete {
+    NSError* err = nil;
+    
+    [self.lock lock];
+    
+    NSMutableArray *queue = [LocalProviderUtil downloaderInfo];
+
+    DownloaderItem* item = [self findItemByDocId:queue docId:docId];
+    
+    if (!item) {
+        assert(0);
+    }
+    
+    DownloaderState* state = [self findStateByItem:self.states item:item];
+    
+    if (state) {
+        [state stop:willDelete];
+        [self.states removeObject:state];
+    } else {
+        if (willDelete) {
+            NSString* path = [LocalPathUtil docDir:item.docId];
+            
+            if ([FileUtil exists:path]) {
+                [[NSFileManager defaultManager] removeItemAtPath:[FileUtil fullPath:path] error:&err];
+                if (err) {
+                    NSLog(@"Error: %@", err);
+                    assert(0);
+                }
+            }
+        }
+    }
+    
+    [queue removeObject:item];
+    
+    [LocalProviderUtil setDownloaderInfo:queue];
+    
+    [self.lock unlock];
 }
 
 #pragma mark public
@@ -234,7 +263,7 @@ static Downloader* _instance = nil;
     self.stopped = YES;
 
     for (DownloaderState* state in self.states) {
-        [state stop];
+        [state stop:NO];
     }
     
     [self.states removeAllObjects];
@@ -245,11 +274,11 @@ static Downloader* _instance = nil;
     }
 }
 
-- (void)addItem:(NSString *)docId permitType:(DownloaderPermitType)permitType saveLimit:(DownloaderSaveLimit)saveLimit endpoint:(NSString *)endpoint insertPosition:(DownloaderInsertPosition)insertPosition {
+- (void)addItem:(NSString *)docId permitType:(DownloaderPermitType)permitType saveLimit:(DownloaderSaveLimit)saveLimit endpoint:(NSString *)endpoint insertPosition:(DownloaderInsertPosition)insertPosition title:(NSString *)title {
 
     [self.lock lock];
     
-    NSMutableArray *queue = [NSKeyedUnarchiver unarchiveObjectWithFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+    NSMutableArray *queue = [LocalProviderUtil downloaderInfo];
     
     if (!queue) {
         NSLog(@"create downloader info");
@@ -258,22 +287,16 @@ static Downloader* _instance = nil;
     
     for (DownloaderItem* item in queue) {
         if ([item.docId isEqual:docId]) {
-            if (item.suspend) {
-                item.suspend = NO;
-
-                [NSKeyedArchiver archiveRootObject:queue toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
-                
-                [self start];
-            }
+            NSLog(@"requested docuemnt is already in queue");
             
             [self.lock unlock];
-            
-            NSLog(@"requested docuemnt is already in queue");
+            [self start];
+
             return;
         }
     }
     
-    DownloaderItem* item = [DownloaderItem itemWithParam:docId permitType:permitType saveLimit:saveLimit endpoint:endpoint insertPosition:insertPosition];
+    DownloaderItem* item = [DownloaderItem itemWithParam:docId permitType:permitType saveLimit:saveLimit endpoint:endpoint insertPosition:insertPosition title:title];
     
     if (insertPosition == DownloaderInsertPositionHead) {
         [queue insertObject:item atIndex:0];
@@ -281,82 +304,22 @@ static Downloader* _instance = nil;
         [queue addObject:item];
     }
     
-    [NSKeyedArchiver archiveRootObject:queue toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+    [LocalProviderUtil setDownloaderInfo:queue];
     
     [self.lock unlock];
-    
     [self start];
 }
 
 - (void)removeItem:(NSString *)docId {
-    [self.lock lock];
-    
-    NSMutableArray *queue = [NSKeyedUnarchiver unarchiveObjectWithFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
-
-    DownloaderItem* item = [self findItemByDocId:queue docId:docId];
-    
-    if (!item) {
-        // this for sample document. umm... :(
-        [self.lock unlock];
-        return;
-    }
-    
-    DownloaderState* state = [self findStateByItem:self.states item:item];
-    
-    if (state) {
-        [state stop];
-        [self.states removeObject:state];
-    }
-    
-    [queue removeObject:item];
-    
-    [NSKeyedArchiver archiveRootObject:queue toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
-    
-    [self.lock unlock];
+    [self dequeueItem:docId willDelete:YES];
 }
 
 - (void)suspendItem:(NSString *)docId {
-    [self.lock lock];
-    
-    NSMutableArray *queue = [NSKeyedUnarchiver unarchiveObjectWithFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
-
-    DownloaderItem* item = [self findItemByDocId:queue docId:docId];
-    
-    if (!item) {
-        assert(0);
-    }
-    
-    DownloaderState* state = [self findStateByItem:self.states item:item];
-    
-    if (state) {
-        [state stop];
-        [self.states removeObject:state];
-    }
-
-    item.suspend = YES;
-    
-    [NSKeyedArchiver archiveRootObject:queue toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
-
-    [self.lock unlock];
-}
-
-- (void)resumeItem:(NSString *)docId {
-    [self.lock lock];
-    
-    NSMutableArray *queue = [NSKeyedUnarchiver unarchiveObjectWithFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
-    
-    [self findItemByDocId:queue docId:docId].suspend = NO;
-    
-    [NSKeyedArchiver archiveRootObject:queue toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
-    
-    [self.lock unlock];
-    
-    [self stop];
-    [self start];
+    [self dequeueItem:docId willDelete:NO];
 }
 
 - (NSArray *)list {
-    NSMutableArray *queue = [NSKeyedUnarchiver unarchiveObjectWithFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+    NSMutableArray *queue = [LocalProviderUtil downloaderInfo];
     
     NSMutableArray *list = [NSMutableArray arrayWithCapacity:queue.count];
     
@@ -370,7 +333,7 @@ static Downloader* _instance = nil;
 - (void)sort:(NSArray *)docIds {
     [self.lock lock];
     
-    NSMutableArray *queue = [NSKeyedUnarchiver unarchiveObjectWithFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+    NSMutableArray *queue = [LocalProviderUtil downloaderInfo];
     
     NSMutableArray *sorted = [NSMutableArray arrayWithCapacity:queue.count];
 
@@ -385,27 +348,12 @@ static Downloader* _instance = nil;
         @throw @"set is not equal";
     }
     
-    [NSKeyedArchiver archiveRootObject:sorted toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+    [LocalProviderUtil setDownloaderInfo:sorted];
     
     [self.lock unlock];
     
     [self stop];
     [self start];
-}
-
-#pragma mark UIAlertViewDelegate
-
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-    if (![alertView isKindOfClass:[UIStringTagAlertView class]]) {
-        assert(0);
-    }
-    
-    if (buttonIndex == alertView.cancelButtonIndex) {
-        return;
-    }
-    
-    NSString* docId = ((UIStringTagAlertView *)alertView).stringTag;
-    [self resumeItem:docId];
 }
 
 @end

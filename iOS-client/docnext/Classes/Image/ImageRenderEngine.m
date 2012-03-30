@@ -78,7 +78,7 @@
 
 - (void)drawSingleImage:(GLuint)texId x:(int)x y:(int)y w:(int)w h:(int)h {
     glBindTexture(GL_TEXTURE_2D, texId);
-    glDrawTexiOES(x , y, 0, w, h);
+    glDrawTexiOES(x, y, 0, w, h);
 }
 
 - (void)checkAndDrawSingleImage:(BOOL)isFirst textures:(NSArray *)textures statuses:(NSArray *)statuses py:(int)py px:(int)px x:(int)x y:(int)y w:(int)w h:(int)h surface:(CGSize)surface {
@@ -156,7 +156,7 @@
 - (void)drawImage:(ImageMatrix *)matrix padding:(CGSize)padding state:(ImageState *)state {
     int xSign = [ImageDirectionMethod toXSign:state.direction];
     int ySign = [ImageDirectionMethod toYSign:state.direction];
-        
+    
     for (int level = state.minLevel; level <= state.maxLevel; level++) {
         if (level > state.minLevel && (matrix.scale < pow(2, level - state.minLevel - 1))) {
             break;
@@ -214,7 +214,7 @@
                         for (int px = 0; px < ytex.count; px++) {
                             int width = rint([matrix length:AT_AS(ytex, px, TextureInfo).size.width] / factor);
                             
-                            // avoid glDrawTexiOES limitation
+                            // avoid glDrawTexiOES limitation (except max level)
                             if ((width > TEXTURE_SIZE * 2 || height > TEXTURE_SIZE * 2) && level < state.maxLevel) {
                                 continue;
                             }
@@ -237,8 +237,13 @@
     int nDeleta = state.nPage;
     for (int delta = -nDeleta; delta <= nDeleta; delta++) {
         int page = state.page + delta;
-        
+
         if (page >= 0 && page < self.nPage) {
+            id pageObj = AT(self.toPortraitPage, page);
+            if (pageObj == [NSNull null]) {
+                continue;
+            }
+            
             CGSize pageSpacing = [self pageSpacing:matrix state:state page:page delta:delta];
             
             float x = [matrix x:0] + padding.width + pageSpacing.width + [matrix length:state.pageSize.width - 1] * delta * xSign;
@@ -246,7 +251,7 @@
             float y = [matrix y:0] + padding.height - pageSpacing.height - [matrix length:state.pageSize.height - 1] * delta * ySign;
             float height = [matrix length:state.pageSize.height];
             
-            for (ImageAnnotationInfo* i in AT(state.overlay, page)) {
+            for (ImageAnnotationInfo* i in AT(state.overlay, [pageObj intValue])) {
                 CGRect r = i.annotation.region;
                 i.frame = CGRectMake(rint(x + r.origin.x * width), rint(y + r.origin.y * height), rint(r.size.width * width), rint(r.size.height * height));
                 
@@ -291,8 +296,8 @@
     
     for (PageInfo* page in self.pages) {
         for (NSArray* textures in page.textures) {
-            for ( NSArray* row in textures ) {
-                for ( TextureInfo* elem in row ) {
+            for (NSArray* row in textures) {
+                for (TextureInfo* elem in row) {
                     [buf addObject:NUM_I(elem.texId)];
                 }
             }
@@ -326,7 +331,7 @@
 - (void)prepare:(int)p_nPage minLevel:(int)minLevel maxLevel:(int)maxLevel pageSize:(CGSize)pageSize surfaceSize:(CGSize)surfaceSize image:(ImageInfo *)image doc:(DocInfo *)doc {
     self.nPage = p_nPage;
     
-    self.background = [TextureInfo infoWithTiledImage:[UIImage imageNamed:@"background.png"] size:surfaceSize];
+    self.background = [TextureInfo infoWithTiledImage:[UIImage imageNamed:@"image_background.png"] size:surfaceSize];
     self.blank = [TextureInfo infoWithColor:1 g:1 b:1 alpha:1];
     self.red = [TextureInfo infoWithColor:1 g:0.8 b:0.6 alpha:0.4];
     self.darkBlack = [TextureInfo infoWithColor:0 g:0.6 b:0 alpha:0.5];

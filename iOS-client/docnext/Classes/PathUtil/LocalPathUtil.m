@@ -11,39 +11,30 @@
 
 @implementation LocalPathUtil
 
-
 #pragma mark public
 
-+ (void)ensureDocDir:(NSString *)docId {
-    [FileUtil ensureDir:[self docDir:docId]];
-}
-
-+ (void)ensureImageDir:(NSString *)docId {
-    [FileUtil ensureDir:[self imageDir:docId]];
-}
-
 + (NSString *)completedPath:(NSString *)docId {
-    return [NSString stringWithFormat:@"%@completed", [self docDir:docId]];
+    return [[self docDir:docId] stringByAppendingPathComponent:@"completed"];
 }
 
 + (NSString *)docDir:(NSString *)docId {
-    return [NSString stringWithFormat:@"/docs/%@/", docId];
+    return [@"/docs" stringByAppendingFormat:docId];
 }
 
 + (NSString *)imageAnnotationPath:(NSString *)docId page:(int)page {
-    return [NSString stringWithFormat:@"%@%d.anno.json", [self imageDir:docId], page];
+    return [[self imageDir:docId] stringByAppendingPathComponent:[NSString stringWithFormat:@"%d.anno.json", page]];
 }
 
 + (NSString *)imageDir:(NSString *)docId {
-    return [NSString stringWithFormat:@"%@image/", [self docDir:docId]];
+    return [[self docDir:docId] stringByAppendingPathComponent:@"image"];
 }
 
 + (NSString *)imageInfoPath:(NSString *)docId {
-    return [NSString stringWithFormat:@"%@image.json", [self imageDir:docId]];
+    return [[self imageDir:docId] stringByAppendingPathComponent:@"image.json"];
 }
 
 + (NSString *)imageInitDownloadedPath:(NSString *)docId {
-    return [NSString stringWithFormat:@"%@image_init_downloaded", [self docDir:docId]];
+    return [[self docDir:docId] stringByAppendingPathComponent:@"image_init_downloaded"];
 }
 
 + (NSString *)imageRegionsName:(int)page {
@@ -51,7 +42,7 @@
 }
 
 + (NSString *)imageRegionsPath:(NSString *)docId page:(int)page {
-    return [NSString stringWithFormat:@"%@%@", [self imageDir:docId], [self imageRegionsName:page]];
+    return [[self imageDir:docId] stringByAppendingPathComponent:[self imageRegionsName:page]];
 }
 
 + (NSString *)imageTextureName:(int)page level:(int)level px:(int)px py:(int)py isWebp:(BOOL)isWebp {
@@ -59,8 +50,7 @@
 }
 
 + (NSString *)imageTexturePath:(NSString *)docId page:(int)page level:(int)level px:(int)px py:(int)py isWebp:(BOOL)isWebp {
-    return [NSString stringWithFormat:
-            @"%@%@", [self imageDir:docId], [self imageTextureName:page level:level px:px py:py isWebp:isWebp]];
+    return [[self imageDir:docId] stringByAppendingPathComponent:[self imageTextureName:page level:level px:px py:py isWebp:isWebp]];
 }
 
 + (NSString *)imageThumbnailName:(int)page {
@@ -68,19 +58,19 @@
 }
 
 + (NSString *)imageThumbnailPath:(NSString *)docId page:(int)page {
-    return [NSString stringWithFormat:@"%@%@", [self imageDir:docId], [self imageThumbnailName:page]];
+    return [[self imageDir:docId] stringByAppendingPathComponent:[self imageThumbnailName:page]];
 }
 
 + (NSString *)infoPath:(NSString *)docId {
-    return [NSString stringWithFormat:@"%@info.json", [self docDir:docId]];
+    return [[self docDir:docId] stringByAppendingPathComponent:@"info.json"];
 }
 
 + (NSString *)bookmarkInfoPath:(NSString *)docId {
-    return [NSString stringWithFormat:@"%@bookmark.json", [self docDir:docId]];
+    return [[self docDir:docId] stringByAppendingPathComponent:@"bookmark.json"];
 }
 
 + (NSString *)lastOpenedPagePath:(NSString *)docId {
-    return [NSString stringWithFormat:@"%@lastOpenedPage.dat", [self docDir:docId]];
+    return [[self docDir:docId] stringByAppendingPathComponent:@"lastOpenedPage.dat"];
 }
 
 + (NSString *)downloaderInfoPath {

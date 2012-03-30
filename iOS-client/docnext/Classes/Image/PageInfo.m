@@ -89,4 +89,11 @@
     return [[[PageInfo alloc] initWithParam:minLevel maxLevel:maxLevel page:page image:image] autorelease];
 }
 
+- (void)dealloc {
+    self.textures = nil;
+    self.statuses = nil;
+    
+    [super dealloc];
+}
+
 @end

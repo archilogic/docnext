@@ -16,6 +16,7 @@
 #import "ImageAnnotationInfo.h"
 #import "OrientationUtil.h"
 #import "AnnotationInfo.h"
+#import "DebugLog.h"
 
 #define EPSILON 0.001
 #define FLING_VELOCITY_LIMIT 1000
@@ -112,27 +113,121 @@
         }
         
         if (delta == 1) {
-            [self.loader unloadTop:page - 2];
-            [self.loader unloadRest:page];
-            [self.loader loadRest:page + 2];
-            [self.loader loadTop:page + 4];
+#ifdef PRELOAD
+            [self.loader unloadTop:self.page - 2];
+            [self.loader unloadRest:self.page];
+            [self.loader loadRest:self.page + 2];
+            [self.loader loadTop:self.page + 4];
+#else
+            if (self.direction == ImageDirectionL2R) {
+                if ([self.spreadFirstPages containsObject:NUM_I(self.page + 1)]) {
+                    // case 0|1,2
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadTop:self.page];
+                    [self.loader loadTop:self.page + 1];
+                    [self.loader loadTop:self.page + 2];
+                    [self.loader loadRest:self.page + 1];
+                    [self.loader loadRest:self.page + 2];
+                } else {
+                    // case 0|1
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadTop:self.page];
+                    [self.loader loadTop:self.page + 1];
+                    [self.loader loadRest:self.page + 1];
+                }
+            } else {
+                if ([self.spreadFirstPages containsObject:NUM_I(self.page)]) {
+                    // case 1|0,-1
+                    [self.loader unloadRest:self.page - 1];
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadTop:self.page - 1];
+                    [self.loader unloadTop:self.page];
+                    [self.loader loadTop:self.page + 1];
+                    [self.loader loadRest:self.page + 1];
+                } else {
+                    // case 1|0
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadTop:self.page];
+                    [self.loader loadTop:self.page + 1];
+                    [self.loader loadRest:self.page + 1];
+                }
+            }
+#endif
         } else {
-            [self.loader unloadTop:page - 2];
-            [self.loader unloadTop:page - 1];
-            [self.loader unloadRest:page];
-            [self.loader unloadRest:page + 1];
-            [self.loader loadRest:page + 2];
-            [self.loader loadRest:page + 3];
-            [self.loader loadTop:page + 4];
-            [self.loader loadTop:page + 5];
+#ifdef PRELOAD
+            [self.loader unloadTop:self.page - 2];
+            [self.loader unloadTop:self.page - 1];
+            [self.loader unloadRest:self.page];
+            [self.loader unloadRest:self.page + 1];
+            [self.loader loadRest:self.page + 2];
+            [self.loader loadRest:self.page + 3];
+            [self.loader loadTop:self.page + 4];
+            [self.loader loadTop:self.page + 5];
+#else
+            if (self.direction == ImageDirectionL2R) {
+                if ([self.spreadFirstPages containsObject:NUM_I(self.page + 2)]) {
+                    // case 0,1|2,3
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadRest:self.page + 1];
+                    [self.loader unloadTop:self.page];
+                    [self.loader unloadTop:self.page + 1];
+                    [self.loader loadTop:self.page + 2];
+                    [self.loader loadTop:self.page + 3];
+                    [self.loader loadRest:self.page + 2];
+                    [self.loader loadRest:self.page + 3];
+                } else {
+                    // case 0,1|2
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadRest:self.page + 1];
+                    [self.loader unloadTop:self.page];
+                    [self.loader unloadTop:self.page + 1];
+                    [self.loader loadTop:self.page + 2];
+                    [self.loader loadRest:self.page + 2];
+                }
+            } else {
+                if ([self.spreadFirstPages containsObject:NUM_I(self.page - 1)]) {
+                    // case 2,1|0,-1
+                    [self.loader unloadRest:self.page - 1];
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadTop:self.page - 1];
+                    [self.loader unloadTop:self.page];
+                    [self.loader loadTop:self.page + 1];
+                    [self.loader loadTop:self.page + 2];
+                    [self.loader loadRest:self.page + 1];
+                    [self.loader loadRest:self.page + 2];
+                } else {
+                    // case 2,1|0
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadTop:self.page];
+                    [self.loader loadTop:self.page + 1];
+                    [self.loader loadTop:self.page + 2];
+                    [self.loader loadRest:self.page + 1];
+                    [self.loader loadRest:self.page + 2];
+                }
+            }
+#endif
         }
     } else {
         delta = 1;
         
-        [self.loader unloadTop:page - 1];
-        [self.loader unloadRest:page];
-        [self.loader loadRest:page + 1];
-        [self.loader loadTop:page + 2];
+#ifdef PRELOAD
+        [self.loader unloadTop:self.page - 1];
+        [self.loader unloadRest:self.page];
+        [self.loader loadRest:self.page + 1];
+        [self.loader loadTop:self.page + 2];
+#else
+        if ([OrientationUtil isIPhone]) {
+            [self.loader unloadTop:self.page - 1];
+            [self.loader unloadRest:self.page];
+            [self.loader loadRest:self.page + 1];
+            [self.loader loadTop:self.page + 2];
+        } else {
+            [self.loader unloadRest:self.page];
+            [self.loader unloadTop:self.page];
+            [self.loader loadTop:self.page + 1];
+            [self.loader loadRest:self.page + 1];
+        }
+#endif
     }
     
     self.page += delta;
@@ -170,11 +265,48 @@
         }
         
         if (delta == 1) {
+#ifdef PRELOAD
             [self.loader unloadTop:page + 3];
             [self.loader unloadRest:page + 1];
             [self.loader loadRest:page - 1];
             [self.loader loadTop:page - 3];
+#else
+            if (self.direction == ImageDirectionL2R) {
+                if ([self.spreadFirstPages containsObject:NUM_I(self.page)]) {
+                    // case -1|0,1
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadRest:self.page + 1];
+                    [self.loader unloadTop:self.page];
+                    [self.loader unloadTop:self.page + 1];
+                    [self.loader loadTop:self.page - 1];
+                    [self.loader loadRest:self.page - 1];
+                } else {
+                    // case -1|0
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadTop:self.page];
+                    [self.loader loadTop:self.page - 1];
+                    [self.loader loadRest:self.page - 1];
+                }
+            } else {
+                if ([self.spreadFirstPages containsObject:NUM_I(self.page - 2)]) {
+                    // case 0|-1,-2
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadTop:self.page];
+                    [self.loader loadTop:self.page - 1];
+                    [self.loader loadRest:self.page - 2];
+                    [self.loader loadTop:self.page - 1];
+                    [self.loader loadRest:self.page - 2];
+                } else {
+                    // case 0|-1
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadTop:self.page];
+                    [self.loader loadTop:self.page - 1];
+                    [self.loader loadRest:self.page - 1];
+                }
+            }
+#endif
         } else {
+#ifdef PRELOAD
             [self.loader unloadTop:page + 3];
             [self.loader unloadTop:page + 2];
             [self.loader unloadRest:page + 1];
@@ -183,14 +315,71 @@
             [self.loader loadRest:page - 2];
             [self.loader loadTop:page - 3];
             [self.loader loadTop:page - 4];
+#else
+            if (self.direction == ImageDirectionL2R) {
+                if ([self.spreadFirstPages containsObject:NUM_I(self.page)]) {
+                    // case -2,-1|0,1
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadRest:self.page + 1];
+                    [self.loader unloadTop:self.page];
+                    [self.loader unloadTop:self.page + 1];
+                    [self.loader loadTop:self.page - 1];
+                    [self.loader loadTop:self.page - 2];
+                    [self.loader loadRest:self.page - 1];
+                    [self.loader loadRest:self.page - 2];
+                } else {
+                    // case -2,-1|0
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadTop:self.page];
+                    [self.loader loadTop:self.page - 1];
+                    [self.loader loadTop:self.page - 2];
+                    [self.loader loadRest:self.page - 1];
+                    [self.loader loadRest:self.page - 2];
+                }
+            } else {
+                if ([self.spreadFirstPages containsObject:NUM_I(self.page - 3)]) {
+                    // case 0,-1|-2,-3
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadRest:self.page - 1];
+                    [self.loader unloadTop:self.page];
+                    [self.loader unloadTop:self.page - 1];
+                    [self.loader loadTop:self.page - 2];
+                    [self.loader loadTop:self.page - 3];
+                    [self.loader loadRest:self.page - 2];
+                    [self.loader loadRest:self.page - 3];
+                } else {
+                    // case 0,-1|-2
+                    [self.loader unloadRest:self.page];
+                    [self.loader unloadRest:self.page - 1];
+                    [self.loader unloadTop:self.page];
+                    [self.loader unloadTop:self.page - 1];
+                    [self.loader loadTop:self.page - 2];
+                    [self.loader loadRest:self.page - 2];
+                }
+            }
+#endif
         }
     } else {
         delta = 1;
         
+#ifdef PRELOAD
         [self.loader unloadTop:page + 1];
         [self.loader unloadRest:page];
         [self.loader loadRest:page - 1];
         [self.loader loadTop:page - 2];
+#else
+        if ([OrientationUtil isIPhone]) {
+            [self.loader unloadTop:page + 1];
+            [self.loader unloadRest:page];
+            [self.loader loadRest:page - 1];
+            [self.loader loadTop:page - 2];
+        } else {
+            [self.loader unloadRest:page];
+            [self.loader unloadTop:page];
+            [self.loader loadTop:page - 1];
+            [self.loader loadRest:page - 1];
+        }
+#endif
     }
     
     self.page -= delta;
@@ -258,8 +447,10 @@
     }
 }
 
-- (void)changeFrameForSingle:(int)delta {
-    float right = self.surfaceSize.width - self.pageSize.width * self.matrix.scale;
+- (void)changeFrameToLeft:(int)delta {
+    BOOL spread = [OrientationUtil isSpreadMode];
+    
+    float right = self.surfaceSize.width - self.pageSize.width * self.matrix.scale * (spread ? 2 : 1);
     float bottom = self.surfaceSize.height - self.pageSize.height * self.matrix.scale;
     
     BOOL isLeft;
@@ -273,7 +464,7 @@
         isTop = self.matrix.ty > 0 - EPSILON;
     }
     
-    BOOL isHorizontal = [ConfigProvider readingDirection] == ConfigProviderReadingDirectionHorizontal;
+    BOOL isHorizontal = !spread && [ConfigProvider readingDirection] == ConfigProviderReadingDirectionHorizontal;
     int hDelta = isHorizontal ? 0 : 1;
     
     int pos = (isLeft ? (isTop ? 1 + hDelta : 3) : (isTop ? 0 : 2 - hDelta)) + delta;
@@ -296,100 +487,58 @@
     }
 }
 
-- (void)changeFrameForDouble:(int)delta {
-    float right = self.surfaceSize.width - self.pageSize.width * self.matrix.scale * 2;
-    float midRight = -self.pageSize.width * self.matrix.scale;
-    float midLeft = self.surfaceSize.width - self.pageSize.width * self.matrix.scale;
+- (void)changeFrameToRight:(int)delta {
+    BOOL spread = [OrientationUtil isSpreadMode];
+    
+    float right = self.surfaceSize.width - self.pageSize.width * (spread ? 2 : 1) * self.matrix.scale;
     float bottom = self.surfaceSize.height - self.pageSize.height * self.matrix.scale;
     
     BOOL isLeft;
-    BOOL isMidLeft;
-    BOOL isMidRight;
     BOOL isTop;
     
-    if (delta > 0) { // prefer left bottom
-        isLeft = self.matrix.tx > 0 - EPSILON;
-        isMidLeft = !isLeft && self.matrix.tx > midLeft - EPSILON;
-        isMidRight = !isLeft && !isMidLeft && self.matrix.tx > midRight - EPSILON;
+    if (delta > 0) { // prefer right bottom
+        isLeft = self.matrix.tx > right + EPSILON;
         isTop = self.matrix.ty > bottom + EPSILON;
-    } else { // prefer right top
-        BOOL isRight = self.matrix.tx < right + EPSILON;
-        isMidRight = !isRight && self.matrix.tx < midRight + EPSILON;
-        isMidLeft = !isRight && !isMidRight && self.matrix.tx < midLeft + EPSILON;
-        isLeft = !isRight && !isMidRight && !isMidLeft;
+    } else { // prefer left top
+        isLeft = self.matrix.tx > 0 - EPSILON;
         isTop = self.matrix.ty > 0 - EPSILON;
     }
     
-    BOOL isHorizontal = [ConfigProvider readingDirection] == ConfigProviderReadingDirectionHorizontal;
+    BOOL isHorizontal = !spread && [ConfigProvider readingDirection] == ConfigProviderReadingDirectionHorizontal;
     int hDelta = isHorizontal ? 0 : 1;
     
-    int pos = (isLeft ?
-               (isTop ? (5 + hDelta) : 7) :
-               (isMidLeft ?
-                (isTop ? 4 : (6 - hDelta)) :
-                (isMidRight ?
-                 (isTop ? (1 + hDelta) : 3) :
-                 (isTop ? 0 : (2 - hDelta))
-                 )
-                )
-               ) + delta;
+    int pos = (isLeft ? (isTop ? 0 : 2 - hDelta) : (isTop ? 1 + hDelta : 3)) + delta;
     
     if (pos == -1) {
         if (self.hasPrevPage) {
             self.willGoPrevPage = YES;
         }
-    } else if(pos == 8) {
+    } else if(pos == 4) {
         if (self.hasNextPage) {
             self.willGoNextPage = YES;
         }
     } else {
         self.willTranslate = YES;
-        
-        int px;
-        int py;
-        
         if (isHorizontal) {
-            int table[] = {0, 2, 1, 3, 4, 6, 5, 7};
-            px = table[ pos ] / 2;
-            py = pos / 2;
+            self.willTranslatePoint = CGPointMake((pos % 2) ? right : 0, (pos / 2) ? bottom : 0);
         } else {
-            px = pos / 2;
-            py = pos;
+            self.willTranslatePoint = CGPointMake((pos / 2) ? right : 0, (pos % 2) ? bottom : 0);
         }
-        
-        float x;
-        
-        switch (px) {
-            case 0:
-                x = right;
-                break;
-            case 1:
-                x = midRight;
-                break;
-            case 2:
-                x = midLeft;
-                break;
-            case 3:
-                x = 0;
-                break;
-            default:
-                assert(0);
-        }
-        
-        self.willTranslatePoint = CGPointMake(x, (py % 2) ? bottom : 0);
     }
 }
 
 - (void)changeFrame:(int)delta {
-    if ([OrientationUtil isSpreadMode]) {
-        [self changeFrameForDouble:delta];
+    if (self.direction == ImageDirectionL2R) {
+        [self changeFrameToRight:delta];
+    } else if(self.direction == ImageDirectionR2L) {
+        [self changeFrameToLeft:delta];
     } else {
-        [self changeFrameForSingle:delta];
+        assert(0);
     }
 }
 
 - (float)calcDoubleScale {
-    return MIN(1.0 * self.surfaceSize.width / self.pageSize.width, 1.0 * self.surfaceSize.height / self.pageSize.height) * 2;
+    return MIN(1.0 * self.surfaceSize.width / (self.pageSize.width * ([OrientationUtil isSpreadMode] ? 2 : 1)), 1.0 * self.surfaceSize.height / self.pageSize.height) * 2;
 }
 
 - (void)runAnnotation:(ImageAnnotationInfo *)imageAnnotation {
@@ -456,7 +605,7 @@
 
 - (void)initScale {
     BOOL onlyUseHorizontal = [OrientationUtil isIPhone] && [OrientationUtil isLandscape];
-    float initScale = MIN(1.0 * self.surfaceSize.width / self.pageSize.width, onlyUseHorizontal ? 1e10 : 1.0 * self.surfaceSize.height / self.pageSize.height);
+    float initScale = MIN(1.0 * self.surfaceSize.width / (self.pageSize.width * ([OrientationUtil isSpreadMode] ? 2 : 1)), onlyUseHorizontal ? 1e10 : 1.0 * self.surfaceSize.height / self.pageSize.height);
     
     self.minScale = MIN(initScale, self.calcDoubleScale);
     
@@ -474,19 +623,25 @@
 }
 
 - (void)loadOverlay {
-    NSMutableArray* buf = [NSMutableArray arrayWithCapacity:self.pages];
-    
-    for (int p = 0; p < self.pages; p++) {
-        NSMutableArray* pBuf = [NSMutableArray array];
-        
-        for (AnnotationInfo* a in [LocalProviderUtil annotation:self.docId page:p]) {
-            [pBuf addObject:[ImageAnnotationInfo infoWithAnnotation:a]];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        @autoreleasepool {
+            NSMutableArray* buf = [NSMutableArray arrayWithCapacity:self.pages];
+            
+            for (int p = 0; p < self.pages; p++) {
+                @autoreleasepool {
+                    NSMutableArray* pBuf = [NSMutableArray array];
+                    
+                    for (AnnotationInfo* a in [LocalProviderUtil annotation:self.docId page:p]) {
+                        [pBuf addObject:[ImageAnnotationInfo infoWithAnnotation:a]];
+                    }
+                    
+                    [buf addObject:pBuf];
+                }
+            }
+            
+            self.overlay = buf;
         }
-        
-        [buf addObject:pBuf];
-    }
-    
-    self.overlay = buf;
+    });
 }
 
 - (BOOL)isCleanup {
@@ -517,10 +672,13 @@
     BOOL isFrameMode = fabs(self.matrix.scale - self.calcDoubleScale) < EPSILON;
 
     if (isFrameMode) {
-        if (point.x < self.surfaceSize.width / THREASHOLD) {
-            [self changeFrame:1];
-        } else if (point.x > self.surfaceSize.width - self.surfaceSize.width / THREASHOLD) {
-            [self changeFrame:-1];
+        int w = self.surfaceSize.width / THREASHOLD;
+        int sign  = self.direction == ImageDirectionL2R ? 1 : -1;
+        
+        if (point.x < w) {
+            [self changeFrame:-1 * sign];
+        } else if (point.x > self.surfaceSize.width - w) {
+            [self changeFrame:1 * sign];
         }
     } else {
         float x = point.x - self.matrix.tx;
@@ -604,7 +762,10 @@
 }
 
 - (void)changeScaleToOrigin:(BOOL)toDouble {
-    [self.cleanup calcScale:(toDouble ? self.calcDoubleScale : self.minScale) matrix:self.matrix surface:self.surfaceSize page:self.pageSize padding:self.padding nx:[OrientationUtil isSpreadMode] ? 2 : 1];
+    float toScale = toDouble ? self.calcDoubleScale : self.minScale;
+    float tx = self.direction == ImageDirectionL2R ? 0 : (self.surfaceSize.width - self.pageSize.width * toScale * ([OrientationUtil isSpreadMode] ? 2 : 1));
+    
+    [self.cleanup calcScale:toScale tx:tx ty:0 matrix:self.matrix];
 }
 
 @end

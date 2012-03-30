@@ -15,7 +15,6 @@
 #import "LoadImageTask.h"
 #import "Utilities.h"
 #import "Downloader.h"
-#import "docnextAppDelegate.h"
 #import "FileUtil.h"
 #import "LocalPathUtil.h"
 #import "EAGLView.h"
@@ -25,6 +24,8 @@
 #import "BookmarkInfo.h"
 #import "OrientationUtil.h"
 #import "ImageAnnotationInfo.h"
+#import "DebugLog.h"
+#import "ASIHTTPRequest.h"
 
 #import <MediaPlayer/MediaPlayer.h>
 
@@ -141,6 +142,8 @@
 }
 
 - (UIImage *)thumbnailImage:(int)page {
+    NSError* err = nil;
+    
     NSArray* toPortrait = [self.state.image toPortraitPage:[LocalProviderUtil info:self.state.docId]];
     
     if ([self indexSafeAt:toPortrait index:page] != [NSNull null]) {
@@ -149,7 +152,13 @@
             
             NSString* path = [FileUtil fullPath:[LocalPathUtil imageThumbnailPath:self.state.docId page:p]];
             
-            UIImage* thumb = [UIImage imageWithData:[NSData dataWithContentsOfFile:path]];
+            NSData* data = [NSData dataWithContentsOfFile:path options:0 error:&err];
+            if (err) {
+                NSLog(@"Error: %@", err);
+                assert(0);
+            }
+
+            UIImage* thumb = [UIImage imageWithData:data];
             
             self.thumbnailSize = thumb.size;
             
@@ -175,10 +184,12 @@
     self.toc = [NSMutableArray arrayWithCapacity:0];
     
     for (NSDictionary* elem in [[LocalProviderUtil info:self.state.docId] toc:self.state.image]) {
-        int page = FOR_I(elem, @"page");
-        NSString* text = FOR(elem, @"text");
-        
-        [self.toc addObject:[ImageListItemInfo infoWithParam:[self thumbnailImage:page] page:page text:text]];
+        @autoreleasepool {
+            int page = FOR_I(elem, @"page");
+            NSString* text = FOR(elem, @"text");
+            
+            [self.toc addObject:[ImageListItemInfo infoWithParam:[self thumbnailImage:page] page:page text:text]];
+        }
     }
 }
 
@@ -186,7 +197,9 @@
     self.bookmarks = [NSMutableArray arrayWithCapacity:0];
     
     for (BookmarkInfo* b in [LocalProviderUtil bookmark:self.state.docId]) {
-        [self.bookmarks addObject:[ImageListItemInfo infoWithParam:[self thumbnailImage:b.page] page:b.page text:b.comment]];
+        @autoreleasepool {
+            [self.bookmarks addObject:[ImageListItemInfo infoWithParam:[self thumbnailImage:b.page] page:b.page text:b.comment]];
+        }
     }
 }
 
@@ -206,11 +219,24 @@
 - (void)prepareData {
     DocInfo* doc = [LocalProviderUtil info:self.state.docId];
     self.state.image = [LocalProviderUtil imageInfo:self.state.docId];
+
+#ifdef DebugLogLevelDebug
+    NSLog(@"width: %d, height: %d, maxLevel: %d, isUseActualSize: %d, maxNumberOfLevel: %d, isWebp: %d, hasConcatFile: %d", self.state.image.width, self.state.image.height, self.state.image.maxLevel, self.state.image.isUseActualSize, self.state.image.maxNumberOfLevel, self.state.image.isWebp, self.state.image.hasConcatFile);
+#endif
     
     self.state.direction = doc.binding == ProviderBindingTypeLeft ? ImageDirectionL2R : ImageDirectionR2L;
     
     self.state.minLevel = [ImageLevelUtil minLevel:self.state.image.maxLevel];
     self.state.maxLevel = [ImageLevelUtil maxLevel:self.state.minLevel imageMaxLevel:self.state.image.maxLevel imageMaxNumberOfLevel:self.state.image.maxNumberOfLevel];
+    
+#ifdef DebugLogLevelDebug
+    NSLog(@"state.minLevel: %d, state.maxLevel: %d", self.state.minLevel, self.state.maxLevel);
+#endif
+    
+    // reduce level for memory
+    if ([OrientationUtil isSpreadMode] && self.state.maxLevel > self.state.minLevel) {
+        self.state.maxLevel--;
+    }
     
     int width = self.state.minLevel != self.state.image.maxLevel || !self.state.image.isUseActualSize ? TEXTURE_SIZE * pow(2, self.state.minLevel) : self.state.image.width;
     self.state.pageSize = CGSizeMake(width, self.state.image.height * width / self.state.image.width);
@@ -220,14 +246,14 @@
     self.state.spreadFirstPages = [doc firstPages:self.state.image];
     
     if ([OrientationUtil isSpreadMode]) {
-        if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page)]) {
+        if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page)] && self.state.direction == ImageDirectionR2L) {
             self.state.page++;
+        } else if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page - 1)] && self.state.direction == ImageDirectionL2R) {
+            self.state.page--;
         }
     }
     
-    if ([LocalProviderUtil isCompleted:self.state.docId]) {
-        [self.state loadOverlay];
-    }
+    [self.state loadOverlay];
     
     self.thumbnailFlowCoverView.imageRatio = 1.0 * self.state.image.width / self.state.image.height;
     
@@ -251,6 +277,7 @@
     [self.renderEngine prepare:self.state.pages minLevel:self.state.minLevel maxLevel:self.state.maxLevel pageSize:self.state.pageSize surfaceSize:self.state.surfaceSize image:self.state.image doc:[LocalProviderUtil info:self.state.docId]];
     
     if ([OrientationUtil isSpreadMode]) {
+#ifdef PRELOAD
         [self loadTop:self.state.page];
         [self loadTop:self.state.page + 1];
         [self loadTop:self.state.page + 2];
@@ -259,11 +286,46 @@
         [self loadTop:self.state.page - 2];
         [self loadRest:self.state.page];
         [self loadRest:self.state.page + 1];
+#else
+        if (self.state.direction == ImageDirectionL2R) {
+            if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page)]) {
+                [self loadTop:self.state.page];
+                [self loadTop:self.state.page + 1];
+                [self loadRest:self.state.page];
+                [self loadRest:self.state.page + 1];
+            } else {
+                [self loadTop:self.state.page];
+                [self loadRest:self.state.page];
+            }
+        } else {
+            if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page - 1)]) {
+                [self loadTop:self.state.page - 1];
+                [self loadTop:self.state.page];
+                [self loadRest:self.state.page - 1];
+                [self loadRest:self.state.page];
+            } else {
+                [self loadTop:self.state.page];
+                [self loadRest:self.state.page];
+            }
+        }
+#endif
     } else {
+#ifdef PRELOAD
         [self loadTop:self.state.page];
         [self loadTop:self.state.page + 1];
         [self loadTop:self.state.page - 1];
         [self loadRest:self.state.page];
+#else
+        if ([OrientationUtil isIPhone]) {
+            [self loadTop:self.state.page];
+            [self loadTop:self.state.page + 1];
+            [self loadTop:self.state.page - 1];
+            [self loadRest:self.state.page];
+        } else {
+            [self loadTop:self.state.page];
+            [self loadRest:self.state.page];
+        }
+#endif
     }
 }
 
@@ -275,13 +337,16 @@
 
 - (void)confirmRestoreLastOpenedPage {
     if ([LocalProviderUtil lastOpenedPage:self.state.docId] != -1) {
-        UIAlertView* alert = [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"confirm_dialog_title", @"") message:NSLocalizedString(@"restore_confirm_dialog_message", @"") delegate:self cancelButtonTitle:NSLocalizedString(@"cancel", @"") otherButtonTitles:NSLocalizedString(@"ok", @""), nil] autorelease];
+        UIAlertView* alert = [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"confirm", nil) message:NSLocalizedString(@"restore_confirm_dialog_message", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"cancel", nil) otherButtonTitles:NSLocalizedString(@"ok", nil), nil] autorelease];
         alert.tag = CONFIRM_RESTORE_LAST_OPENED_PAGE_TAG;
         [alert show];
     }
 }
 
 - (void)showView {
+#ifdef DebugLogLevelDebug
+    NSLog(@"showView begin");
+#endif
     [self setupGL];
     [self prepareData];
     
@@ -290,16 +355,28 @@
     [self refreshPageLoadingView];
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        // toc
-        [self loadTOC];
-        [self.tocTableView reloadData];
-        
-        // bookmark
-        [self loadBookmarks];
-        [self.bookmarkTableView reloadData];
-        
-        [self bindConfig];
+        @autoreleasepool {
+#ifdef DebugLogLevelDebug
+            NSLog(@"Begin additional loading");
+#endif
+            // toc
+            [self loadTOC];
+            [self.tocTableView reloadData];
+            
+            // bookmark
+            [self loadBookmarks];
+            [self.bookmarkTableView reloadData];
+            
+            [self bindConfig];
+#ifdef DebugLogLevelDebug
+            NSLog(@"End additional loading");
+#endif
+        }
     });
+    
+#ifdef DebugLogLevelDebug
+    NSLog(@"showView end");
+#endif
 }
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil {
@@ -313,9 +390,10 @@
         self.state.moviePresenter = self;
         
         self.renderEngine = [[[ImageRenderEngine alloc] init] autorelease];
-        self.renderEngine.mod = [OrientationUtil isSpreadMode] ? 6 : 3;
+        self.renderEngine.mod = [OrientationUtil isSpreadMode] ? 4 : 3;
         self.executor = [[[NSOperationQueue alloc] init] autorelease];
         self.executor.maxConcurrentOperationCount = 1;
+        [self.executor setSuspended:YES];
         self.bindQueue = [NSMutableArray array];
         self.unbindQueue = [NSMutableArray array];
         self.initialized = NO;
@@ -325,12 +403,15 @@
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onMoviePlayerDidExitFullscreen:) name:MPMoviePlayerDidExitFullscreenNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onMoviePlayerWillExitFullscreen:) name:MPMoviePlayerWillExitFullscreenNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onMoviePlayerPlaybackDidFinish:) name:MPMoviePlayerPlaybackDidFinishNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onMovieNaturalSizeAvailable:) name:MPMovieNaturalSizeAvailableNotification object:nil];
     }
     
     return self;
 }
 
 - (void)dealloc {
+    NSError* err = nil;
+    
     [[NSNotificationCenter defaultCenter] removeObserver:self name:CONFIG_CHANGED object:nil];
     
     [[NSNotificationCenter defaultCenter] removeObserver:self name:DOWNLOADER_PROGRESS object:nil];
@@ -344,7 +425,8 @@
     [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMoviePlayerDidExitFullscreenNotification object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMoviePlayerWillExitFullscreenNotification object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMoviePlayerPlaybackDidFinishNotification object:nil];
-    
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:MPMovieNaturalSizeAvailableNotification object:nil];
+
     for (LoadImageTask* task in self.executor.operations) {
         task.abort = YES;
     }
@@ -352,8 +434,16 @@
     [self.executor waitUntilAllOperationsAreFinished];
     
     if (self.permitType == DownloaderPermitTypeSample) {
-        [[Downloader instance] removeItem:self.state.docId];
-        [[NSFileManager defaultManager] removeItemAtPath:[FileUtil fullPath:[LocalPathUtil docDir:self.state.docId]] error:nil];
+        if ([LocalProviderUtil isCompleted:self.state.docId]) {
+            [[NSFileManager defaultManager] removeItemAtPath:[FileUtil fullPath:[LocalPathUtil docDir:self.state.docId]] error:&err];
+            if (err) {
+                NSLog(@"Error: %@", err);
+                assert(0);
+            }
+        } else if([[[Downloader instance] list] containsObject:self.state.docId]) {
+            // this condition for downloading error
+            [[Downloader instance] removeItem:self.state.docId];
+        }
     }
     
     self.gestureRecognizerView = nil;
@@ -461,6 +551,9 @@
 }
 
 - (void)viewDidLoad {
+#ifdef DebugLogLevelDebug
+    NSLog(@"viewDidLoad begin");
+#endif
     [super viewDidLoad];
     
     [self applyBrightness];
@@ -469,7 +562,7 @@
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
-    
+
     [(EAGLView *)self.view setRendererDelegate:self];
     
     if ([LocalProviderUtil isCompleted:self.state.docId]) {
@@ -487,6 +580,9 @@
     [self.thumbnailFlowCoverView setContext:((EAGLView *)self.view).renderer.context];
     
     [self performSelector:@selector(confirmRestoreLastOpenedPage) withObject:nil afterDelay:0.5];
+#ifdef DebugLogLevelDebug
+    NSLog(@"viewDidLoad end");
+#endif
 }
 
 - (void)updateMemoryUsage {
@@ -494,6 +590,9 @@
 }
 
 - (void)viewWillAppear:(BOOL)animated {
+#ifdef DebugLogLevelDebug
+    NSLog(@"viewWillAppear begin");
+#endif
     [super viewWillAppear:animated];
 
     if (!self.initialized) {
@@ -507,8 +606,10 @@
         [self prepareGL];
         
         if ([OrientationUtil isSpreadMode]) {
-            if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page)]) {
+            if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page)] && self.state.direction == ImageDirectionR2L) {
                 self.state.page++;
+            } else if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page - 1)] && self.state.direction == ImageDirectionL2R) {
+                self.state.page--;
             }
         }
     }
@@ -516,6 +617,19 @@
     [self adjustStaticMenu:[UIApplication sharedApplication].statusBarOrientation];
     
     [(EAGLView *)self.view startAnimation];
+#ifdef DebugLogLevelDebug
+    NSLog(@"viewWillAppear end");
+#endif
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+#ifdef DebugLogLevelDebug
+    NSLog(@"viewDidAppear begin");
+#endif
+    [super viewDidAppear:animated];
+#ifdef DebugLogLevelDebug
+    NSLog(@"viewDidAppear end");
+#endif
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -531,18 +645,27 @@
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
     self.toPortraitPage = [self.state.image toPortraitPage:[LocalProviderUtil info:self.state.docId]];
     
-    self.renderEngine.mod = [OrientationUtil isSpreadMode] ? 6 : 3;
-    [self.renderEngine cleanup];
-    [self prepareGL];
+    self.state.maxLevel = [ImageLevelUtil maxLevel:self.state.minLevel imageMaxLevel:self.state.image.maxLevel imageMaxNumberOfLevel:self.state.image.maxNumberOfLevel];
     
-    if ([OrientationUtil isSpreadMode]) {
-        if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page)]) {
-            self.state.page++;
-        }
+    // reduce level for memory
+    if ([OrientationUtil isSpreadMode] && self.state.maxLevel > self.state.minLevel) {
+        self.state.maxLevel--;
     }
     
     self.state.spreadFirstPages = [[LocalProviderUtil info:self.state.docId] firstPages:self.state.image];
+    
+    if ([OrientationUtil isSpreadMode]) {
+        if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page)] && self.state.direction == ImageDirectionR2L) {
+            self.state.page++;
+        } else if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page - 1)] && self.state.direction == ImageDirectionL2R) {
+            self.state.page--;
+        }
+    }
 
+    self.renderEngine.mod = [OrientationUtil isSpreadMode] ? 4 : 3;
+    [self.renderEngine cleanup];
+    [self prepareGL];
+    
     [self.thumbnailFlowCoverView invalidateCache];
     [self.thumbnailFlowCoverView draw];
 
@@ -563,8 +686,9 @@
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
-    
-    [self.navigationController popViewControllerAnimated:NO];
+#ifdef DebugLogLevelDebug
+    NSLog(@"didReceiveMemoryWarning");
+#endif 
 }
 
 - (BOOL)isInMenu {
@@ -602,7 +726,7 @@
 - (IBAction)toggleBookmarkButtonClick  {
     NSMutableArray* newBookmarks = [NSMutableArray arrayWithArray:[LocalProviderUtil bookmark:self.state.docId]];
     
-    BookmarkInfo* info = [BookmarkInfo info:AT_AS([self.state.image toSpreadPage:[LocalProviderUtil info:self.state.docId]], self.state.page, NSNumber).intValue comment:NSLocalizedString(@"bookmark_no_comment", @"")];
+    BookmarkInfo* info = [BookmarkInfo info:AT_AS([self.state.image toSpreadPage:[LocalProviderUtil info:self.state.docId]], self.state.page, NSNumber).intValue comment:NSLocalizedString(@"bookmark_no_comment", nil)];
     
     if ([newBookmarks containsObject:info]) {
         [newBookmarks removeObject:info];
@@ -729,7 +853,7 @@
 }
 
 - (IBAction)backClick {
-    UIAlertView* alert = [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"confirm_dialog_title", @"") message:NSLocalizedString(@"finish_confirm_dialog_message", @"") delegate:self cancelButtonTitle:NSLocalizedString(@"ok", @"") otherButtonTitles:NSLocalizedString(@"cancel", @""), nil] autorelease];
+    UIAlertView* alert = [[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"confirm", nil) message:NSLocalizedString(@"finish_confirm_dialog_message", nil) delegate:self cancelButtonTitle:NSLocalizedString(@"cancel", nil) otherButtonTitles:NSLocalizedString(@"ok", nil), nil] autorelease];
     alert.tag = CONFIRM_FINISH_TAG;
     [alert show];
 }
@@ -742,9 +866,9 @@
     }];
 }
 
-- (void)setParams:(NSString* )docId permitType:(DownloaderPermitType)p_permitType {
+- (void)setParams:(NSString* )docId permitType:(DownloaderPermitType)aPermitType {
     self.state.docId = docId;
-    self.permitType = p_permitType;
+    self.permitType = aPermitType;
 }
 
 - (void)bindMenuInfo {
@@ -771,6 +895,7 @@
 - (void)changePage:(int)page refresh:(BOOL)refresh {
     if (refresh) {
         if ([OrientationUtil isSpreadMode]) {
+#ifdef PRELOAD
             [self unloadTop:self.state.page];
             [self unloadTop:self.state.page + 1];
             [self unloadTop:self.state.page + 2];
@@ -779,11 +904,46 @@
             [self unloadTop:self.state.page - 2];
             [self unloadRest:self.state.page];
             [self unloadRest:self.state.page + 1];
+#else
+            if (self.state.direction == ImageDirectionL2R) {
+                if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page)]) {
+                    [self unloadTop:self.state.page];
+                    [self unloadTop:self.state.page + 1];
+                    [self unloadRest:self.state.page];
+                    [self unloadRest:self.state.page + 1];
+                } else {
+                    [self unloadTop:self.state.page];
+                    [self unloadRest:self.state.page];
+                }
+            } else {
+                if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page - 1)]) {
+                    [self unloadTop:self.state.page - 1];
+                    [self unloadTop:self.state.page];
+                    [self unloadRest:self.state.page - 1];
+                    [self unloadRest:self.state.page];
+                } else {
+                    [self unloadTop:self.state.page];
+                    [self unloadRest:self.state.page];
+                }
+            }
+#endif
         } else {
+#ifdef PRELOAD
             [self unloadTop:self.state.page];
             [self unloadTop:self.state.page + 1];
             [self unloadTop:self.state.page - 1];
             [self unloadRest:self.state.page];
+#else
+            if ([OrientationUtil isIPhone]) {
+                [self unloadTop:self.state.page];
+                [self unloadTop:self.state.page + 1];
+                [self unloadTop:self.state.page - 1];
+                [self unloadRest:self.state.page];
+            } else {
+                [self unloadTop:self.state.page];
+                [self unloadRest:self.state.page];
+            }
+#endif
         }
     }
     
@@ -791,6 +951,7 @@
     
     if (refresh) {
         if ([OrientationUtil isSpreadMode]) {
+#ifdef PRELOAD
             [self loadTop:self.state.page];
             [self loadTop:self.state.page + 1];
             [self loadTop:self.state.page + 2];
@@ -799,11 +960,46 @@
             [self loadTop:self.state.page - 2];
             [self loadRest:self.state.page];
             [self loadRest:self.state.page + 1];
+#else
+            if (self.state.direction == ImageDirectionL2R) {
+                if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page)]) {
+                    [self loadTop:self.state.page];
+                    [self loadTop:self.state.page + 1];
+                    [self loadRest:self.state.page];
+                    [self loadRest:self.state.page + 1];
+                } else {
+                    [self loadTop:self.state.page];
+                    [self loadRest:self.state.page];
+                }
+            } else {
+                if ([self.state.spreadFirstPages containsObject:NUM_I(self.state.page - 1)]) {
+                    [self loadTop:self.state.page - 1];
+                    [self loadTop:self.state.page];
+                    [self loadRest:self.state.page - 1];
+                    [self loadRest:self.state.page];
+                } else {
+                    [self loadTop:self.state.page];
+                    [self loadRest:self.state.page];
+                }
+            }
+#endif
         } else {
+#ifdef PRELOAD
             [self loadTop:self.state.page];
             [self loadTop:self.state.page + 1];
             [self loadTop:self.state.page - 1];
             [self loadRest:self.state.page];
+#else
+            if ([OrientationUtil isIPhone]) {
+                [self loadTop:self.state.page];
+                [self loadTop:self.state.page + 1];
+                [self loadTop:self.state.page - 1];
+                [self loadRest:self.state.page];
+            } else {
+                [self loadTop:self.state.page];
+                [self loadRest:self.state.page];
+            }
+#endif
         }
     }
     
@@ -848,8 +1044,9 @@
     });
 }
 
+// TODO: Confirm behavior on suspend
 - (void)onDownloaderProgress:(NSNotification *)notification {
-    if ([self.state.docId compare:notification.object] != NSOrderedSame) {
+    if (![self.state.docId isEqualToString:notification.object]) {
         return;
     }
     
@@ -859,9 +1056,7 @@
 }
 
 - (void)onDownloaderTextureProgress:(NSNotification *)notification {
-    NSString* docId = notification.object;
-    
-    if ([self.state.docId compare:docId] != NSOrderedSame) {
+    if (![self.state.docId isEqualToString:notification.object]) {
         return;
     }
     
@@ -871,19 +1066,19 @@
     int px = FOR_I(dic, @"px");
     int py = FOR_I(dic, @"py");
     
-    if (abs(page - self.state.page ) <= 1) {
+    if (abs(page - self.state.page) <= 1 && level <= self.state.maxLevel) {
         [self.executor addOperation:[LoadImageTask taskWithParam:self.state.docId page:page level:level px:px py:py isWebp:self.state.image.isWebp pageHolder:self.state binder:self threshold:[OrientationUtil isSpreadMode] ? 4 : 2]];
     }
     
+    __block id this = [self retain];
     dispatch_async(dispatch_get_main_queue(), ^{
         [self refreshPageLoadingView];
+        [this release];
     });
 }
 
 - (void)onDownloaderAnnotationProgress:(NSNotification *)notification {
-    NSString* docId = notification.object;
-    
-    if ([self.state.docId compare:docId] != NSOrderedSame) {
+    if (![self.state.docId isEqualToString:notification.object]) {
         return;
     }
     
@@ -905,7 +1100,9 @@
 }
 
 - (void)onSingleTap:(CGPoint)point {
+#ifdef DebugLogLevelDebug
     NSLog(@"singleTap: %@", NSStringFromCGPoint(point));
+#endif
     
     if ([self.state tap:[self convertCGPoint:point]]) {
         [UIView animateWithDuration:0.2 animations:^{
@@ -1002,8 +1199,40 @@
     
     NSArray* dimen = [self.renderEngine textureDimension:page];
 #ifdef REDUCE_TEXTURE
+    for (LoadImageTask* task in self.executor.operations) {
+        if (task.page == page && task.level == self.state.minLevel) {
+            task.abort = YES;
+        }
+    }
+    
+    @synchronized(self.bindQueue) {
+        for (BindQueueItem* item in self.bindQueue) {
+            if (item.page == page && item.level == self.state.minLevel) {
+                free(item.data);
+                item.data = nil;
+                [self.bindQueue removeObject:item];
+            }
+        }
+    }
+    
     int level = self.state.minLevel;
 #else
+    for (LoadImageTask* task in self.executor.operations) {
+        if (task.page == page) {
+            task.abort = YES;
+        }
+    }
+    
+    @synchronized(self.bindQueue) {
+        for (BindQueueItem* item in self.bindQueue) {
+            if (item.page == page) {
+                free(item.data);
+                item.data = nil;
+                [self.bindQueue removeObject:item];
+            }
+        }
+    }
+    
     for (int level = self.state.minLevel; level <= self.state.maxLevel; level++) {
 #endif
     for (int py = 0; py < AT2_AS(dimen, level - self.state.minLevel, 1, NSNumber).intValue; py++) {
@@ -1030,6 +1259,22 @@
         return;
     }
     
+    for (LoadImageTask* task in self.executor.operations) {
+        if (task.page == page && task.level != self.state.minLevel) {
+            task.abort = YES;
+        }
+    }
+
+    @synchronized(self.bindQueue) {
+        for (BindQueueItem* item in self.bindQueue) {
+            if (item.page == page && item.level != self.state.minLevel) {
+                free(item.data);
+                item.data = nil;
+                [self.bindQueue removeObject:item];
+            }
+        }
+    }
+
     NSArray* dimen = [self.renderEngine textureDimension:page];
     for (int level = self.state.minLevel + 1; level <= self.state.maxLevel; level++) {
         for (int py = 0; py < AT2_AS(dimen, level - self.state.minLevel, 1, NSNumber).intValue; py++) {
@@ -1069,8 +1314,33 @@
 
 #pragma mark MoviePresenter
 
+- (BOOL)isMovieAvailable:(NSURL *)url {
+    ASIHTTPRequest* request = [ASIHTTPRequest requestWithURL:url];
+    
+    request.requestMethod = @"HEAD";
+    request.timeOutSeconds = 3;
+    
+    [request startSynchronous];
+
+    int sc = request.responseStatusCode;
+    if (sc != 200 || request.error) {
+        NSLog(@"statusCode: %d, statusMessage: %@, error: %@, url: %@", sc, request.responseStatusMessage, request.error, url);
+        NSLog(@"body: %@", request.responseString);
+        return NO;
+    }
+    
+    return YES;
+}
+
 - (void)showMovie:(ImageAnnotationInfo *)info {
-    self.moviePlayer = [[[MPMoviePlayerController alloc] initWithContentURL:[NSURL URLWithString:((MovieAnnotationInfo *)info.annotation).target]] autorelease];
+    NSURL* url = [NSURL URLWithString:((MovieAnnotationInfo *)info.annotation).target];
+    
+    if (![self isMovieAvailable:url]) {
+        [[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"message_error_cannot_play_movie", nil) delegate:nil cancelButtonTitle:NSLocalizedString(@"ok", nil) otherButtonTitles:nil] autorelease] show];
+        return;
+    }
+    
+    self.moviePlayer = [[[MPMoviePlayerController alloc] initWithContentURL:url] autorelease];
     
     self.moviePlayer.view.frame = [self invertCGRect:info.frame];
     [self.view addSubview:self.moviePlayer.view];
@@ -1093,12 +1363,22 @@
 }
 
 - (void)onMoviePlayerDidExitFullscreen:(NSNotification *)notification {
-    [self.moviePlayer.view removeFromSuperview];
     [self.moviePlayer stop];
 }
 
 - (void)onMoviePlayerPlaybackDidFinish:(NSNotification *)notification {
+    if ([[notification.userInfo objectForKey:MPMoviePlayerPlaybackDidFinishReasonUserInfoKey] intValue] == MPMovieFinishReasonPlaybackError) {
+        [[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"error", nil) message:NSLocalizedString(@"message_error_cannot_play_movie", nil) delegate:nil cancelButtonTitle:NSLocalizedString(@"ok", nil) otherButtonTitles:nil] autorelease] show];
+    }
+    
+    [self.moviePlayer.view removeFromSuperview]; // for invalid movie. should find better way though...
     self.moviePlayer = nil;
+}
+
+- (void)onMovieNaturalSizeAvailable:(NSNotification *)notification {
+    MPMoviePlayerController* mpc = notification.object;
+    
+    NSLog(@"onMovieNaturalSizeAvailable: naturalSize: %@", NSStringFromCGSize(mpc.naturalSize));
 }
 
 #pragma mark UIAlertViewDelegate
@@ -1110,7 +1390,7 @@
             [self changePage:[LocalProviderUtil lastOpenedPage:self.state.docId] refresh:YES];
         }
     } else if (alertView.tag == CONFIRM_FINISH_TAG) {
-        if (buttonIndex == 0) {
+        if (buttonIndex == 1) {
             [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:YES];
             
             [self.navigationController popViewControllerAnimated:YES];
@@ -1121,36 +1401,34 @@
 #pragma mark ESRendererDelegate
 
 - (void)performRender {
+    if (self.executor.isSuspended) {
+        [self.executor setSuspended:NO];
+    }
+    
     while (self.unbindQueue.count > 0) {
         UnbindQueueItem* item = nil;
 
         @synchronized(self.unbindQueue) {
-            item = [self.unbindQueue.lastObject retain];
+            item = [[self.unbindQueue.lastObject retain] autorelease];
             [self.unbindQueue removeLastObject];
         }
         
         [self.renderEngine unbindPageImage:item minLevel:self.state.minLevel];
-        
-        [item release];
     }
     
     while (self.bindQueue.count > 0) {
         BindQueueItem* item = nil;
         
         @synchronized(self.bindQueue) {
-            item = [self.bindQueue.lastObject retain];
+            item = [[self.bindQueue.lastObject retain] autorelease];
             [self.bindQueue removeLastObject];
         }
         
-        if (item.page < self.state.page - ([OrientationUtil isSpreadMode] ? 2 : 1) || item.page > self.state.page + ([OrientationUtil isSpreadMode] ? 3 : 1)) {
+        if (item.level > self.state.maxLevel || item.page < self.state.page - ([OrientationUtil isSpreadMode] ? 2 : 1) || item.page > self.state.page + ([OrientationUtil isSpreadMode] ? 3 : 1)) {
             free(item.data);
             item.data = nil;
-            
-            [item release];
         } else {
             [self.renderEngine bindPageImage:item minLevel:self.state.minLevel];
-            
-            [item release];
             break;
         }
     }
@@ -1173,7 +1451,15 @@
 }
 
 - (void)flowCover:(FlowCoverView *)view didSelect:(int)cover {
-    [self changePage:[self thumbnailLeftOriginPosition:cover] refresh:YES];
+    int p = [self thumbnailLeftOriginPosition:cover];
+    if ([OrientationUtil isSpreadMode]) {
+        if ([self.state.spreadFirstPages containsObject:NUM_I(p)] && self.state.direction == ImageDirectionR2L) {
+            p++;
+        } else if ([self.state.spreadFirstPages containsObject:NUM_I(p - 1)] && self.state.direction == ImageDirectionL2R) {
+            p--;
+        }
+    }
+    [self changePage:p refresh:YES];
 }
 
 - (void)flowCover:(FlowCoverView *)view didChanged:(int)cover {

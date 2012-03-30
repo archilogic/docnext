@@ -18,6 +18,8 @@
 #import "TexturePosition.h"
 #import "Reachability.h"
 #import "UIStringTagAlertView.h"
+#import "DebugLog.h"
+#import "ImageViewController.h"
 
 #define THUMBNAIL_BLOCK 16
 
@@ -25,7 +27,7 @@
 
 @property(nonatomic, assign) NSLock* lock;
 @property(nonatomic, retain) ASIHTTPRequest* req;
-@property(nonatomic) BOOL running;
+@property(atomic) BOOL running;
 @property(atomic) BOOL shouldStop;
 @property(atomic) BOOL working;
 @property(nonatomic, assign) Downloader* delegate;
@@ -42,6 +44,7 @@
 @synthesize req;
 @synthesize running;
 @synthesize shouldStop;
+@synthesize willDelete;
 @synthesize working;
 @synthesize delegate;
 
@@ -54,6 +57,7 @@
         self.req = nil;
         self.running = YES;
         self.shouldStop = NO;
+        self.willDelete = NO;
         self.working = NO;
         self.delegate = p_delegate;
     }
@@ -71,6 +75,10 @@
 }
 
 - (void)findAndIncOrFail:(NSMutableArray *)queue {
+    if (self.shouldStop) {
+        return;
+    }
+    
     for (DownloaderItem* i in queue) {
         if ([i isEqual:self.item]) {
             i.sequence++;
@@ -85,45 +93,74 @@
 - (void)proceedSequence {
     [self.lock lock];
     
-    NSMutableArray *queue = [NSKeyedUnarchiver unarchiveObjectWithFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+    NSMutableArray *queue = [LocalProviderUtil downloaderInfo];
     [self findAndIncOrFail:queue];
-    [NSKeyedArchiver archiveRootObject:queue toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+    [LocalProviderUtil setDownloaderInfo:queue];
     
     [self.lock unlock];
     
     self.item.sequence++;
 }
 
-- (void)waitAndRetry {
-    [NSThread sleepForTimeInterval:3];
+- (unsigned long long)availableStorage {
+    NSError *err = nil;
     
-    if (![Reachability reachabilityForInternetConnection].isReachable) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"error_dialog_title", @"") message:NSLocalizedString(@"network_unavailable_error_dialog_message", @"") delegate:nil cancelButtonTitle:NSLocalizedString(@"ok", @"") otherButtonTitles:nil] autorelease] show];
-        });
-        
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_FAILED object:self.item.docId];
-    } else {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            UIStringTagAlertView* alert = [[[UIStringTagAlertView alloc] initWithTitle:NSLocalizedString(@"confirm_dialog_title", @"") message:NSLocalizedString(@"retry_download_confirm_dialog_message", @"") delegate:self.delegate cancelButtonTitle:NSLocalizedString(@"cancel", @"") otherButtonTitles:NSLocalizedString(@"ok", @""), nil] autorelease];
-            alert.stringTag = self.item.docId;
-            
-            [alert show];
-        });
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    
+    NSDictionary *dictionary = [[NSFileManager defaultManager] attributesOfFileSystemForPath:[paths lastObject] error:&err];
+    if (err) {
+        NSLog(@"Error: %@", err);
+        assert(0);
     }
     
-    self.item.suspend = YES;
+    if (dictionary) {
+        return [[dictionary objectForKey:NSFileSystemFreeSize] unsignedLongLongValue];
+    } else {
+        NSLog(@"Error Obtaining System Memory Info");
+        return 0;
+    }
+}
+
+- (unsigned long long)fileSize:(NSString *)path {
+    NSError* err = nil;
+    
+    NSDictionary* dict = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:&err];
+    if (err) {
+        NSLog(@"Error: %@", err);
+        assert(0);
+    }
+    
+    return [[dict objectForKey:NSFileSize] unsignedLongLongValue];
+}
+
+- (void)error:(NSString *)messageFormat {
+    [NSThread sleepForTimeInterval:3];
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"error", nil) message:[NSString stringWithFormat:messageFormat, self.item.title] delegate:self.delegate cancelButtonTitle:NSLocalizedString(@"ok", nil) otherButtonTitles:nil] autorelease] show];
+    });
+    
+    self.running = NO;
+}
+
+- (NSString *)genTempPath {
+    return [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"temp%f%d", [NSDate timeIntervalSinceReferenceDate], arc4random()]];
 }
 
 - (void)downloadInternal:(NSString *)remotePath urlRef:(NSURL **)urlRef tempRef:(NSString **)tempRef {
     if (![Reachability reachabilityForInternetConnection].isReachable) {
-        [self waitAndRetry];
+        [self error:NSLocalizedString(@"message_confirm_retry_network_problem_with_title", nil)];
         return;
     }
     
     NSURL *url = [NSURL URLWithString:remotePath];
     
-    NSString* temp = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"temp%f", [NSDate timeIntervalSinceReferenceDate]]];
+    NSString* temp = [self genTempPath];
+
+#ifdef DebugLogLevelVerbose
+    NSLog(@"temp: %@", temp);
+    NSLog(@"remotePath: %@, url: %@", remotePath, url);
+#endif
     
     __block ASIHTTPRequest *request = [ASIHTTPRequest requestWithURL:url];
     self.req = request;
@@ -139,10 +176,35 @@
 
     int sc = request.responseStatusCode;
     if (sc != 200 || request.error) {
-        NSLog(@"statusCode: %d, error: %@, url: %@", sc, request.error, remotePath);
+        if (request.error && request.error.code == ASIRequestCancelledErrorType) {
+            return;
+        }
         
-        [self waitAndRetry];
-
+        NSLog(@"statusCode: %d, statusMessage: %@, error: %@, url: %@", sc, request.responseStatusMessage, request.error, remotePath);
+        NSLog(@"body: %@", request.responseString);
+        
+        [self error:NSLocalizedString(@"message_confirm_retry_server_error_with_title", nil)];
+        
+        return;
+    }
+    
+#ifdef DebugLogLevelVerbose
+    NSError* err = nil;
+    NSLog(@"downloaded string: %@", [NSString stringWithContentsOfFile:temp encoding:NSUTF8StringEncoding error:&err]);
+    if (err) {
+        NSLog(@"Seems to be binary file. Error: %@", err);
+        err = nil;
+    }
+    NSData *data = [NSData dataWithContentsOfFile:temp options:0 error:&err];
+    NSLog(@"downloaded data: %@", [data subdataWithRange:NSMakeRange(0, MIN([data length], 128))]);
+    if (err) {
+        NSLog(@"Error: %@", err);
+        NSLog(@"statusCode: %d", sc);
+        err = nil;
+    }
+#endif
+    
+    if (self.shouldStop) {
         return;
     }
 
@@ -160,9 +222,13 @@
         return;
     }
     
-    NSString *dir = [localPath substringToIndex:[localPath rangeOfString:@"/" options:NSBackwardsSearch].location];
-    [FileUtil ensureDir:dir];
+    if ([self fileSize:temp] > [self availableStorage]) {
+        [self error:NSLocalizedString(@"message_error_no_storage_space_with_title", nil)];
+        return;
+    }
     
+    [FileUtil ensureDir:[localPath stringByDeletingLastPathComponent]];
+
     [[NSFileManager defaultManager] moveItemAtPath:temp toPath:[FileUtil fullPath:localPath] error:nil];
     
     complete();
@@ -171,6 +237,8 @@
 }
 
 - (void)downloadConcat:(NSString *)remotePath localPaths:(NSArray *)localPaths progress:(void (^)(int))progress complete:(void (^)(void))complete {
+    NSError* err = nil;
+
     NSURL *url = nil;
     NSString *temp = nil;
     
@@ -179,31 +247,56 @@
     if (!url) {
         return;
     }
-    
 
-    // TODO very simple implementation. need to modify (to use ASIHTTPRequest#didDataReceived or something like) if performance problem occurs.
+    // TODO very simple implementation. need to modify (to use ASIHTTPRequest#didDataReceived or something like) if real-time decoding is required.
 
-    int offset = 0;
-    NSData* data = [NSData dataWithContentsOfFile:temp];
+    NSFileHandle* fh = [NSFileHandle fileHandleForReadingAtPath:temp];
     
     for (int index = 0; index < localPaths.count; index++) {
-        NSString* localPath = AT(localPaths, index);
-        
-        int length = OSReadBigInt64(data.bytes, offset);
-        offset += 8;
-        
-        NSString* part = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"part%f", [NSDate timeIntervalSinceReferenceDate]]];
-        
-        [[data subdataWithRange:NSMakeRange(offset, length)] writeToFile:part atomically:YES];
-        offset += length;
-
-        NSString *dir = [localPath substringToIndex:[localPath rangeOfString:@"/" options:NSBackwardsSearch].location];
-        [FileUtil ensureDir:dir];
-
-        [[NSFileManager defaultManager] moveItemAtPath:part toPath:[FileUtil fullPath:localPath] error:nil];
-        
-        progress(index);
+        @autoreleasepool {
+            NSString* localPath = AT(localPaths, index);
+            
+            int length = OSReadBigInt64([fh readDataOfLength:8].bytes, 0);
+            
+            if (length > [self availableStorage]) {
+                [self error:NSLocalizedString(@"message_error_no_storage_space_with_title", nil)];
+                return;
+            }
+            
+            NSString* part = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"part%f", [NSDate timeIntervalSinceReferenceDate]]];
+            
+            NSData* sub = [fh readDataOfLength:length];
+            
+            if (length != sub.length) {
+                NSLog(@"length != sub.length (%d != %d)", length, sub.length);
+                [self error:NSLocalizedString(@"message_error_broken_item_with_title", nil)];
+                return;
+            }
+            
+            // condition for already downloaded files
+            if (![[NSFileManager defaultManager] fileExistsAtPath:[FileUtil fullPath:localPath]]) {
+                [sub writeToFile:part options:NSDataWritingAtomic error:&err];
+                if (err) {
+                    NSLog(@"Error: %@", err);
+                    assert(0);
+                }
+                
+                [FileUtil ensureDir:[localPath stringByDeletingLastPathComponent]];
+                
+                [[NSFileManager defaultManager] moveItemAtPath:part toPath:[FileUtil fullPath:localPath] error:nil];
+            }
+            
+            progress(index);
+        }
     }
+    
+    if ([fh readDataToEndOfFile].length > 0) {
+        NSLog(@"Incomplete data");
+        [self error:NSLocalizedString(@"message_error_broken_item_with_title", nil)];
+        return;
+    }
+    
+    [fh closeFile];
     
     complete();
     
@@ -234,7 +327,7 @@
                 break;
             }
         } else {
-            [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+            [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
             
             [self proceedSequence];
         }
@@ -251,28 +344,20 @@
         return;
     }
     
-    NSMutableString *remotePath = [NSMutableString stringWithFormat:@"%@?names=", [RemotePathUtil imageDir:self.item.endpoint]];
     NSMutableArray *localPaths = [NSMutableArray array];
     
-    BOOL first = YES;
-    
     for (NSNumber *pos in required) {
-        if (first) {
-            first = NO;
-        } else {
-            [remotePath appendString:@","];
-        }
-
-        [remotePath appendString:[LocalPathUtil imageThumbnailName:pos.intValue]];
         [localPaths addObject:[LocalPathUtil imageThumbnailPath:self.item.docId page:pos.intValue]];
     }
+    
+    NSString* remotePath = [RemotePathUtil imageThumbnailBlockPath:self.item.endpoint pages:required];
     
     [self downloadConcat:remotePath localPaths:localPaths progress:^(int index){
         if (self.shouldStop) {
             return;
         }
         
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
         
         [self proceedSequence];
     } complete:^{
@@ -281,7 +366,7 @@
 
 - (void)ensureImageThumbnailEach:(int)page {
     if ([FileUtil exists:[LocalPathUtil imageThumbnailPath:self.item.docId page:page]]){
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
         
         [self proceedSequence];
         return;
@@ -292,7 +377,7 @@
             return;
         }
         
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
         
         [self proceedSequence];
     }];
@@ -355,7 +440,7 @@
             if (![FileUtil exists:[LocalPathUtil imageTexturePath:self.item.docId page:page level:level px:px py:py isWebp:NO]]) {
                 [ret addObject:[TexturePosition positionWithParmas:level px:px py:py]];
             } else {
-                [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+                [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
                 
                 [self proceedSequence];
             }
@@ -386,28 +471,20 @@
         return;
     }
     
-    NSMutableString *remotePath = [NSMutableString stringWithFormat:@"%@?names=", [RemotePathUtil imageDir:self.item.endpoint]];
-    NSMutableArray *localPaths = [NSMutableArray array];
-    
-    BOOL first = YES;
+    NSMutableArray *localPaths = [NSMutableArray arrayWithCapacity:required.count];
     
     for (TexturePosition *pos in required) {
-        if (first) {
-            first = NO;
-        } else {
-            [remotePath appendString:@","];
-        }
-        
-        [remotePath appendString:[LocalPathUtil imageTextureName:page level:pos.level px:pos.px py:pos.py isWebp:image.isWebp]];
         [localPaths addObject:[LocalPathUtil imageTexturePath:self.item.docId page:page level:pos.level px:pos.px py:pos.py isWebp:image.isWebp]];
     }
+    
+    NSString* remotePath = [RemotePathUtil imageTexturePerPagePath:self.item.endpoint page:page texs:required isWebp:image.isWebp];
     
     [self downloadConcat:remotePath localPaths:localPaths progress:^(int index){
         if (self.shouldStop) {
             return;
         }
         
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
         
         TexturePosition* tp = AT(required, index);
         [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_TEXTURE_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_I(page), @"page", NUM_I(tp.level), @"level", NUM_I(tp.px), @"px", NUM_I(tp.py), @"py", nil]];
@@ -438,7 +515,7 @@
             return;
         }
         
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
         
         TexturePosition* tp = AT(required, index);
         [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_TEXTURE_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_I(page), @"page", NUM_I(tp.level), @"level", NUM_I(tp.px), @"px", NUM_I(tp.py), @"py", nil]];
@@ -450,23 +527,22 @@
 
 - (void)ensureImageTexturePerTexture:(int)page level:(int)level px:(int)px py:(int)py {
     if ([FileUtil exists:[LocalPathUtil imageTexturePath:self.item.docId page:page level:level px:px py:py isWebp:NO]]) {
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
         
         [self proceedSequence];
         return;
     }
     
     [self download:[RemotePathUtil imageTexturePath:self.item.endpoint page:page level:level px:px py:py isWebp:NO] localPath:[LocalPathUtil imageTexturePath:self.item.docId page:page level:level px:px py:py isWebp:NO] complete:^{
-              if (self.shouldStop) {
-                  return;
-              }
-              
-              [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
-              [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_TEXTURE_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_I(page), @"page", NUM_I(level), @"level", NUM_I(px), @"px", NUM_I(py), @"py", nil]];
-              
-              [self proceedSequence];
-          }
-     ];
+        if (self.shouldStop) {
+            return;
+        }
+        
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_TEXTURE_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_I(page), @"page", NUM_I(level), @"level", NUM_I(px), @"px", NUM_I(py), @"py", nil]];
+        
+        [self proceedSequence];
+    }];
 }
 
 - (void)ensureImageTexture:(int)page level:(int)level px:(int)px py:(int)py {
@@ -490,60 +566,69 @@
 }
 
 - (void)ensureImageAnnotation:(int)page {
+    NSError* err = nil;
+    
     if (self.shouldStop) {
         return;
     }
     
-    ImageInfo* image = [LocalProviderUtil imageInfo:self.item.docId];
-    
-    if (!image.hasAnnotation) {
-        [[@"[]" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:[FileUtil fullPath:[LocalPathUtil imageAnnotationPath:self.item.docId page:page]] atomically:YES];
-        
-        [self proceedSequence];
-        return;
-    }
-    
-    if ([FileUtil exists:[LocalPathUtil imageAnnotationPath:self.item.docId page:page]]){
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
-        
-        [self proceedSequence];
-        return;
-    }
-    
-    [self download:[RemotePathUtil imageAnnotationPath:self.item.endpoint page:page] localPath:[LocalPathUtil imageAnnotationPath:self.item.docId page:page] complete:^{
+    void (^complete)(void) = ^{
         if (self.shouldStop) {
             return;
         }
         
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
         [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_ANNOTATION_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_I(page), @"page", nil]];
         
         [self proceedSequence];
-    }];
-}
-
-- (void)ensureImageInfo {
-    if ([FileUtil exists:[LocalPathUtil imageInfoPath:self.item.docId]]){
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+    };
+    
+    ImageInfo* image = [LocalProviderUtil imageInfo:self.item.docId];
+    
+    if (!image.hasAnnotation) {
+        [[@"[]" dataUsingEncoding:NSUTF8StringEncoding] writeToFile:[FileUtil fullPath:[LocalPathUtil imageAnnotationPath:self.item.docId page:page]] options:NSDataWritingAtomic error:&err];
+        if (err) {
+            NSLog(@"Error: %@", err);
+            assert(0);
+        }
         
-        [self proceedSequence];
+        complete();
         return;
     }
     
-    [self download:[RemotePathUtil imageInfoPath:self.item.endpoint] localPath:[LocalPathUtil imageInfoPath:self.item.docId] complete:^{
+    if ([FileUtil exists:[LocalPathUtil imageAnnotationPath:self.item.docId page:page]]){
+        complete();
+        return;
+    }
+    
+    [self download:[RemotePathUtil imageAnnotationPath:self.item.endpoint page:page] localPath:[LocalPathUtil imageAnnotationPath:self.item.docId page:page] complete:complete];
+}
+
+- (void)ensureImageInfo {
+    if (self.shouldStop) {
+        return;
+    }
+    
+    void (^complete)(void) = ^{
         if (self.shouldStop) {
             return;
         }
         
         [LocalProviderUtil setImageInitDownloaded:self.item.docId];
         
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
         [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_IMAGE_INIT_DOWNLOADED object:self.item.docId];
         
         [self proceedSequence];
-    }];
+    };
+    
+    if ([FileUtil exists:[LocalPathUtil imageInfoPath:self.item.docId]]){
+        complete();
+        return;
+    }
+    
+    [self download:[RemotePathUtil imageInfoPath:self.item.endpoint] localPath:[LocalPathUtil imageInfoPath:self.item.docId] complete:complete];
 }
-
 - (void)checkInfo {
     DocInfo* info = [LocalProviderUtil info:self.item.docId];
     
@@ -564,74 +649,18 @@
         return;
     }
     
-    if ([FileUtil exists:[LocalPathUtil infoPath:self.item.docId]]){
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
+    void (^complete)(void) = ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", self, @"state", nil]];
         
         [self checkInfo];
+    };
+    
+    if ([FileUtil exists:[LocalPathUtil infoPath:self.item.docId]]){
+        complete();
         return;
     }
     
-    [self download:[RemotePathUtil infoPath:self.item.endpoint] localPath:[LocalPathUtil infoPath:self.item.docId] complete:^{
-        [[NSNotificationCenter defaultCenter] postNotificationName:DOWNLOADER_PROGRESS object:self.item.docId userInfo:[NSDictionary dictionaryWithObjectsAndKeys:NUM_F(self.calcProgress), @"progress", nil]];
-        
-        [self checkInfo];
-    }];
-}
-
-- (NSInvocation *)cleanupInvocation {
-    SEL sel = @selector(cleanup);
-    
-    NSInvocation* inv = [NSInvocation invocationWithMethodSignature:[self methodSignatureForSelector:sel]];
-    [inv setTarget:self];
-    [inv setSelector:sel];
-    
-    return inv;
-}
-
-- (NSInvocation *)ensureImageAnnotationInvocation:(int)page {
-    SEL sel = @selector(ensureImageAnnotation:);
-    
-    NSInvocation* inv = [NSInvocation invocationWithMethodSignature:[self methodSignatureForSelector:sel]];
-    [inv setTarget:self];
-    [inv setSelector:sel];
-    [inv setArgument:&page atIndex:2];
-    
-    return inv;
-}
-
-- (NSInvocation *)ensureImageThumbnailInvocation:(int)page {
-    SEL sel = @selector(ensureImageThumbnail:);
-    
-    NSInvocation* inv = [NSInvocation invocationWithMethodSignature:[self methodSignatureForSelector:sel]];
-    [inv setTarget:self];
-    [inv setSelector:sel];
-    [inv setArgument:&page atIndex:2];
-    
-    return inv;
-}
-
-- (NSInvocation *)ensureImageTextureInvocation:(int)page level:(int)level px:(int)px py:(int)py {
-    SEL sel = @selector(ensureImageTexture:level:px:py:);
-    
-    NSInvocation* inv = [NSInvocation invocationWithMethodSignature:[self methodSignatureForSelector:sel]];
-    [inv setTarget:self];
-    [inv setSelector:sel];
-    [inv setArgument:&page atIndex:2];
-    [inv setArgument:&level atIndex:3];
-    [inv setArgument:&px atIndex:4];
-    [inv setArgument:&py atIndex:5];
-    
-    return inv;
-}
-
-- (NSInvocation *)ensureInfoInvocation {
-    SEL sel = @selector(ensureInfo);
-    
-    NSInvocation* inv = [NSInvocation invocationWithMethodSignature:[self methodSignatureForSelector:sel]];
-    [inv setTarget:self];
-    [inv setSelector:sel];
-    
-    return inv;
+    [self download:[RemotePathUtil infoPath:self.item.endpoint] localPath:[LocalPathUtil infoPath:self.item.docId] complete:complete];
 }
 
 - (float)calcProgress {
@@ -657,7 +686,7 @@
     assert(0);
 }
 
-- (NSInvocation *)toImageInvocation:(int)value doc:(DocInfo *)doc {
+- (void)imageInvokeSingle:(int)value doc:(DocInfo *)doc {
     ImageInfo* image = [LocalProviderUtil imageInfo:self.item.docId];
     
     int minLevel = [ImageLevelUtil minLevel:image.maxLevel];
@@ -671,7 +700,8 @@
         value %= perPage;
         
         if (value < 1) {
-            return [self ensureImageAnnotationInvocation:page];
+            [self ensureImageAnnotation:page];
+            return;
         }
         
         value--;
@@ -686,7 +716,8 @@
                 int px = value / ny;
                 int py = value % ny;
                 
-                return [self ensureImageTextureInvocation:page level:level px:px py:py];
+                [self ensureImageTexture:page level:level px:px py:py];
+                return;
             }
             
             value -= nx * ny;
@@ -696,25 +727,27 @@
     value -= doc.pages * perPage;
     
     if (value < doc.pages) {
-        return [self ensureImageThumbnailInvocation:value];
+        [self ensureImageThumbnail:value];
+        return;
     }
     
     value -= doc.pages;
     
     if (value < 1) {
-        NSLog(@"invoke cleanup");
-        return [self cleanupInvocation];
+        [self cleanup];
+        return;
     }
     
     NSLog(@"assert: docId: %@, value: %d", self.item.docId, value);
     assert(0);
 }
 
-- (NSInvocation *)toInvocation {
+- (void)invokeSingle {
     int value = self.item.sequence;
     
     if (value < 1) {
-        return [self ensureInfoInvocation];
+        [self ensureInfo];
+        return;
     }
     
     value -= 1;
@@ -722,23 +755,52 @@
     DocInfo *doc = [LocalProviderUtil info:self.item.docId];
     
     if (AT_AS(doc.types, 0, NSNumber).intValue == ProviderDocumentTypeImage) {
-        return [self toImageInvocation:value doc:doc];
+        [self imageInvokeSingle:value doc:doc];
+        return;
     }
     
     assert(0);
 }
 
 - (void)doInvocation {
-    self.working = YES;
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        if (self.shouldStop) {
+        @autoreleasepool {
+            NSError* err = nil;
+            
+            if (self.shouldStop) {
+                if (self.willDelete) {
+                    NSString* path = [LocalPathUtil docDir:self.item.docId];
+                    
+                    if ([FileUtil exists:path]) {
+                        [[NSFileManager defaultManager] removeItemAtPath:[FileUtil fullPath:path] error:&err];
+                        if (err) {
+                            NSLog(@"Error: %@", err);
+                            assert(0);
+                        }
+                    }
+                }
+                
+                self.working = NO;
+                
+                return;
+            }
+            
+            [self invokeSingle];
+            
+            if (self.willDelete) {
+                NSString* path = [LocalPathUtil docDir:self.item.docId];
+                
+                if ([FileUtil exists:path]) {
+                    [[NSFileManager defaultManager] removeItemAtPath:[FileUtil fullPath:path] error:&err];
+                    if (err) {
+                        NSLog(@"Error: %@", err);
+                        assert(0);
+                    }
+                }
+            }
+            
             self.working = NO;
-            return;
         }
-        
-        // REFACTOR no need to use NSInvocation now
-        [self.toInvocation invoke];
-        self.working = NO;
     });
 }
 
@@ -749,7 +811,19 @@
 }
 
 - (void)invoke {
-    if (!self.working) {
+#ifdef DebugLogLevelDebug
+    NSLog(@"DownloaderState#invoke");
+#endif
+    
+    BOOL isWorking;
+    @synchronized(self) {
+        isWorking = self.working;
+        if (!isWorking) {
+            self.working = YES;
+        }
+    }
+    
+    if (!isWorking) {
         [self doInvocation];
     }
 }
@@ -758,9 +832,24 @@
     return !self.running;
 }
 
-- (void)stop {
-    NSLog(@"stop");
+- (void)stop:(BOOL)aWillDelete {
+    NSError* err = nil;
+    
     self.shouldStop = YES;
+    self.willDelete = aWillDelete;
+    
+    if (!self.working && self.willDelete) {
+        NSString* path = [LocalPathUtil docDir:self.item.docId];
+        
+        if ([FileUtil exists:path]) {
+            [[NSFileManager defaultManager] removeItemAtPath:[FileUtil fullPath:path] error:&err];
+            if (err) {
+                NSLog(@"Error: %@", err);
+                assert(0);
+            }
+        }
+    }
+    
     [self.req clearDelegatesAndCancel];
 }
     

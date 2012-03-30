@@ -9,10 +9,6 @@
 #import "EAGLView.h"
 #import "ESRenderer.h"
 
-//#import <OpenGLES/EAGL.h>
-//#import <OpenGLES/EAGLDrawable.h>
-//#import <OpenGLES/ES1/gl.h>
-//#import <OpenGLES/ES1/glext.h>
 #import <QuartzCore/QuartzCore.h>
 
 #define ANIMATION_FRAME_INTERVAL 1
@@ -20,12 +16,14 @@
 @interface EAGLView ()
 
 @property(nonatomic, retain) CADisplayLink* displayLink;
+@property(nonatomic) BOOL isInAnimation;
 
 @end
 
 @implementation EAGLView
 
 @synthesize renderer;
+@synthesize isInAnimation;
 
 @synthesize displayLink;
 
@@ -49,12 +47,20 @@
             [self release];
             return nil;
         }
+        
+        self.isInAnimation = NO;
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onApplicationDidBecomeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onApplicationWillResignActive:) name:UIApplicationWillResignActiveNotification object:nil];
     }
     
     return self;
 }
 
 - (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillResignActiveNotification object:nil];
+    
     self.renderer = nil;
     
     self.displayLink = nil;
@@ -71,6 +77,14 @@
     [self drawView:nil];
 }
 
+#pragma mark - notification
+
+- (void)onApplicationDidBecomeActive:(NSNotification *)notification {
+}
+
+- (void)onApplicationWillResignActive:(NSNotification *)notification {
+}
+
 #pragma mark public
 
 - (void)setRendererDelegate:(id<ESRendererDelegate>)delegate {
@@ -78,12 +92,24 @@
 }
 
 - (void)startAnimation {
+    if (self.isInAnimation) {
+        return;
+    }
+    
+    self.isInAnimation = YES;
+    
     self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(drawView:)];
     [self.displayLink setFrameInterval:ANIMATION_FRAME_INTERVAL];
     [self.displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
 }
 
 - (void)stopAnimation {
+    if (!self.isInAnimation) {
+        return;
+    }
+    
+    self.isInAnimation = NO;
+    
     [self.displayLink invalidate];
     self.displayLink = nil;
 }

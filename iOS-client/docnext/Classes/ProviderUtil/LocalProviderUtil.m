@@ -14,11 +14,20 @@
 #import "Utilities.h"
 #import "BookmarkInfo.h"
 #import "AnnotationInfo.h"
+#import "DebugLog.h"
 
 @implementation LocalProviderUtil
 
 + (id)jsonInfo:(NSString *)path {
-    return [[NSString stringWithContentsOfFile:[FileUtil fullPath:path] encoding:NSUTF8StringEncoding error:nil] JSONValue];
+    NSError* err = nil;
+    
+    NSString* str = [NSString stringWithContentsOfFile:[FileUtil fullPath:path] encoding:NSUTF8StringEncoding error:&err];
+    if (err) {
+        NSLog(@"Error: %@", err);
+        assert(0);
+    }
+    
+    return [str JSONValue];
 }
 
 #pragma mark public
@@ -32,7 +41,7 @@
 }
 
 + (NSString *)tocText:(NSString *)docId page:(int)page {
-    NSString* ret = NSLocalizedString(@"toc_no_title", @"");
+    NSString* ret = NSLocalizedString(@"toc_no_title", nil);
 
     for (NSDictionary* toc in [[self info:docId] toc:[self imageInfo:docId]]) {
         int tocPage = FOR_I(toc, @"page");
@@ -53,7 +62,13 @@
 + (NSArray *)bookmark:(NSString *)docId {
     NSMutableArray* list = [NSMutableArray array];
     
-    for (NSDictionary* dict in [self jsonInfo:[LocalPathUtil bookmarkInfoPath:docId]]) {
+    NSString* path = [LocalPathUtil bookmarkInfoPath:docId];
+    
+    if (![FileUtil exists:path]) {
+        return list;
+    }
+    
+    for (NSDictionary* dict in [self jsonInfo:path]) {
         [list addObject:[BookmarkInfo infoWithDictionary:dict]];
     }
     
@@ -61,13 +76,19 @@
 }
 
 + (void)setBookmark:(NSString *)docId bookmark:(NSArray *)bookmark {
+    NSError* err = nil;
+    
     NSMutableArray* list = [NSMutableArray array];
     
     for (BookmarkInfo* b in bookmark) {
         [list addObject:[b toDictionary]];
     }
     
-    [list.JSONRepresentation writeToFile:[FileUtil fullPath:[LocalPathUtil bookmarkInfoPath:docId]] atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    [list.JSONRepresentation writeToFile:[FileUtil fullPath:[LocalPathUtil bookmarkInfoPath:docId]] atomically:YES encoding:NSUTF8StringEncoding error:&err];
+    if (err) {
+        NSLog(@"Error: %@", err);
+        assert(0);
+    }
 }
 
 + (BOOL)isCompleted:(NSString *)docId {
@@ -109,17 +130,31 @@
 }
 
 + (int)lastOpenedPage:(NSString *)docId {
+    NSError* err = nil;
+    
     NSString* path = [LocalPathUtil lastOpenedPagePath:docId];
     
     if (![FileUtil exists:path]) {
         return -1;
     }
     
-    return [[NSString stringWithContentsOfFile:[FileUtil fullPath:path] encoding:NSUTF8StringEncoding error:nil] intValue];
+    NSString* str = [NSString stringWithContentsOfFile:[FileUtil fullPath:path] encoding:NSUTF8StringEncoding error:&err];
+    if (err) {
+        NSLog(@"Error: %@", err);
+        assert(0);
+    }
+    
+    return [str intValue];
 }
 
 + (void)setLastOpenedPage:(NSString *)docId page:(int)page {
-    [[NSString stringWithFormat:@"%d", page] writeToFile:[FileUtil fullPath:[LocalPathUtil lastOpenedPagePath:docId]] atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    NSError* err = nil;
+    
+    [[NSString stringWithFormat:@"%d", page] writeToFile:[FileUtil fullPath:[LocalPathUtil lastOpenedPagePath:docId]] atomically:YES encoding:NSUTF8StringEncoding error:&err];
+    if (err) {
+        NSLog(@"Error: %@", err);
+        assert(0);
+    }
 }
 
 + (NSArray *)annotation:(NSString *)docId page:(int)page {
@@ -134,6 +169,14 @@
     }
 
     return buf;
+}
+
++ (NSMutableArray *)downloaderInfo {
+    return [NSKeyedUnarchiver unarchiveObjectWithFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
+}
+
++ (void)setDownloaderInfo:(NSArray *)info {
+    [NSKeyedArchiver archiveRootObject:info toFile:[FileUtil fullPath:[LocalPathUtil downloaderInfoPath]]];
 }
 
 @end

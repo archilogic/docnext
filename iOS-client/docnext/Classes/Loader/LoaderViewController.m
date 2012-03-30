@@ -15,6 +15,7 @@
 #import "Downloader.h"
 #import "ConfigProvider.h"
 #import "ImageViewController.h"
+#import "DebugLog.h"
 
 @interface LoaderViewController ()
 
@@ -33,12 +34,18 @@
 @synthesize initialized;
 
 - (void)showImage {
+#ifdef DebugLogLevelDebug
+    NSLog(@"showImage begin");
+#endif
     ImageViewController* vc = [[[ImageViewController alloc] init] autorelease];
     [vc setParams:self.docId permitType:self.permitType];
     
     UINavigationController* nav = self.navigationController;
     [nav popViewControllerAnimated:NO];
     [nav pushViewController:vc animated:NO];
+#ifdef DebugLogLevelDebug
+    NSLog(@"showImage end");
+#endif
 }
 
 - (void)checkDocInfo {
@@ -67,12 +74,14 @@
     if (!self.initialized) {
         self.initialized = YES;
         
-        if (![LocalProviderUtil isCompleted:self.docId]) {
-            [[Downloader instance] addItem:self.docId
-                                permitType:self.permitType
-                                 saveLimit:self.saveLimit
-                                  endpoint:self.endpoint
-                            insertPosition:self.insertPosition];
+        NSArray* downloading = [[Downloader instance] list];
+        
+        if ([downloading containsObject:self.docId] && ![[downloading objectAtIndex:0] isEqualToString:self.docId]) {
+            NSMutableArray* modified = [NSMutableArray arrayWithArray:downloading];
+            [modified removeObject:self.docId];
+            [modified insertObject:self.docId atIndex:0];
+            
+            [[Downloader instance] sort:modified];
         }
         
         if([FileUtil exists:[LocalPathUtil infoPath:self.docId]]){

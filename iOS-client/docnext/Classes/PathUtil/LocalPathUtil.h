@@ -11,8 +11,6 @@
 @interface LocalPathUtil : NSObject
 
 // document path
-+ (void)ensureDocDir:(NSString *)docId;
-+ (void)ensureImageDir:(NSString *)docId;
 + (NSString *)completedPath:(NSString *)docId;
 + (NSString *)docDir:(NSString *)docId;
 + (NSString *)imageAnnotationPath:(NSString *)docId page:(int)page;

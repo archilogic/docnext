@@ -142,7 +142,8 @@
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageSize.width, imageSize.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     }
     
-    GLint rect[] = {0, self.size.height, self.size.width, -self.size.height};
+    // 1 for GL_CLAMP_TO_EDGE
+    GLint rect[] = {1, self.size.height - 2, self.size.width - 2, -(self.size.height - 2)};
     glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_CROP_RECT_OES, rect);
 }
 

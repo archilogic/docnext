@@ -37,8 +37,13 @@
 }
 
 + (void)ensureDir:(NSString *)path {
-    [[NSFileManager defaultManager] createDirectoryAtPath:
-     [self fullPath:path] withIntermediateDirectories:YES attributes:nil error:nil];
+    NSError* err = nil;
+    
+    [[NSFileManager defaultManager] createDirectoryAtPath:[self fullPath:path] withIntermediateDirectories:YES attributes:nil error:&err];
+    if (err) {
+        NSLog(@"Error: %@", err);
+        assert(0);
+    }
 }
 
 + (BOOL)exists:(NSString *)path {
@@ -48,15 +53,5 @@
 + (void)touch:(NSString *)path {
     [[NSFileManager defaultManager] createFileAtPath:[self fullPath:path] contents:nil attributes:nil];
 }
-
-/*
-+ (NSData *)read:(NSString *)path {
-    return [[[NSData alloc] initWithContentsOfFile:[FileUtil fullPath:path]] autorelease];
-}
-
-+ (BOOL)remove:(NSString *)path {
-    return [[NSFileManager defaultManager] removeItemAtPath:[FileUtil fullPath:path] error:nil];
-}
-*/
 
 @end

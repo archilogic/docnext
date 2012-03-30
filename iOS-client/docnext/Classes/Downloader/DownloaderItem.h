@@ -16,10 +16,10 @@
 @property(nonatomic) DownloaderSaveLimit saveLimit;
 @property(nonatomic, retain) NSString* endpoint;
 @property(nonatomic) DownloaderInsertPosition insertPosition;
+@property(nonatomic, retain) NSString* title;
 
-@property(nonatomic) BOOL suspend;
 @property(nonatomic) int sequence;
 
-+ (DownloaderItem *)itemWithParam:(NSString *)docId permitType:(DownloaderPermitType)permitType saveLimit:(DownloaderSaveLimit)saveLimit endpoint:(NSString *)endpoint insertPosition:(DownloaderInsertPosition)insertPosition;
++ (DownloaderItem *)itemWithParam:(NSString *)docId permitType:(DownloaderPermitType)permitType saveLimit:(DownloaderSaveLimit)saveLimit endpoint:(NSString *)endpoint insertPosition:(DownloaderInsertPosition)insertPosition title:(NSString *)title;
 
 @end

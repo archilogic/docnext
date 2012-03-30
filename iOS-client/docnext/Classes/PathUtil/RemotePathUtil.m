@@ -7,17 +7,19 @@
 //
 
 #import "RemotePathUtil.h"
+#import "TexturePosition.h"
+#import "LocalPathUtil.h"
 
 @implementation RemotePathUtil
+
++ (NSString *)imageDir:(NSString *)endpoint {
+    return [NSString stringWithFormat:@"%@image/", endpoint];
+}
 
 #pragma mark public
 
 + (NSString *)imageAnnotationPath:(NSString *)endpoint page:(int)page {
     return [NSString stringWithFormat:@"%@%d.anno.json", [RemotePathUtil imageDir:endpoint], page];
-}
-
-+ (NSString *)imageDir:(NSString *)endpoint {
-    return [NSString stringWithFormat:@"%@image/", endpoint];
 }
 
 + (NSString *)imageInfoPath:(NSString *)endpoint {
@@ -41,8 +43,28 @@
             [RemotePathUtil imageDir:endpoint], page, level, px, py, isWebp ? @"webp" : @"jpg"];
 }
 
++ (NSString *)imageTexturePerPagePath:(NSString *)endpoint page:(int)page texs:(NSArray *)texs isWebp:(BOOL)isWebp {
+    NSMutableArray* mapped = [NSMutableArray arrayWithCapacity:texs.count];
+    
+    for (TexturePosition* pos in texs) {
+        [mapped addObject:[LocalPathUtil imageTextureName:page level:pos.level px:pos.px py:pos.py isWebp:isWebp]];
+    }
+    
+    return [NSString stringWithFormat:@"%@?names=%@", [self imageDir:endpoint], [mapped componentsJoinedByString:@","]];
+}
+
 + (NSString *)imageThumbnailPath:(NSString *)endpoint page:(int)page {
     return [NSString stringWithFormat:@"%@thumbnail-%d.jpg", [RemotePathUtil imageDir:endpoint], page];
+}
+
++ (NSString *)imageThumbnailBlockPath:(NSString *)endpoint pages:(NSArray *)pages {
+    NSMutableArray* mapped = [NSMutableArray arrayWithCapacity:pages.count];
+    
+    for (NSNumber* page in pages) {
+        [mapped addObject:[LocalPathUtil imageThumbnailName:page.intValue]];
+    }
+    
+    return [NSString stringWithFormat:@"%@?names=%@", [self imageDir:endpoint], [mapped componentsJoinedByString:@","]];
 }
 
 + (NSString *)infoPath:(NSString *)endpoint {

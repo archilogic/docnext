@@ -18,6 +18,8 @@
 + (DownloaderState *)stateWithItem:(DownloaderItem *)item lock:(NSLock *)lock delegate:(Downloader *)delegate;
 - (void)invoke;
 - (BOOL)didFinished;
-- (void)stop;
+- (void)stop:(BOOL)willDelete;
+
+@property(atomic) BOOL willDelete;
 
 @end
