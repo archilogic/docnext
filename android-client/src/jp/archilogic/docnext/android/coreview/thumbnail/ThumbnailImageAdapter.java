@@ -3,8 +3,12 @@ package jp.archilogic.docnext.android.coreview.thumbnail;
 import java.io.File;
 import java.io.IOException;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+
 import jp.archilogic.docnext.android.Kernel;
 import jp.archilogic.docnext.android.activity.CoreViewActivity;
+import jp.archilogic.docnext.android.drm.Encryption;
 import jp.archilogic.docnext.android.exception.NoMediaMountException;
 import jp.archilogic.docnext.android.info.DocInfo;
 import jp.archilogic.docnext.android.provider.local.LocalProvider;
@@ -61,12 +65,17 @@ public class ThumbnailImageAdapter extends BaseAdapter {
             }
 
             final byte[] data = FileUtils.readFileToByteArray( new File( path ) );
+            final byte[] decrypted = Encryption.getDecryptor().doFinal( data );
 
-            return BitmapFactory.decodeByteArray( data , 0 , data.length );
+            return BitmapFactory.decodeByteArray( decrypted , 0 , decrypted.length );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
             _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
         } catch ( final IOException e ) {
+            throw new RuntimeException( e );
+        } catch ( final IllegalBlockSizeException e ) {
+            throw new RuntimeException( e );
+        } catch ( final BadPaddingException e ) {
             throw new RuntimeException( e );
         }
 

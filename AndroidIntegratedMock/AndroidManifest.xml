@@ -21,10 +21,12 @@
         <activity android:name="jp.archilogic.docnext.android.activity.bookmark.BookmarkActivity" />
         <activity android:name="jp.archilogic.docnext.android.activity.toc.TOCActivity" />
         <activity android:name="jp.archilogic.docnext.android.setting.SettingActivity" />
+        <activity android:name="jp.archilogic.docnext.android.activity.VideoViewActivity" />
 
         <service android:name="jp.archilogic.docnext.android.service.DownloadService" />
 
-        <provider android:name="jp.archilogic.docnext.android.provider.FullTextSearchProvider" android:authorities="jp.archilogic.docnext.android.provider.FullTextSearchProvider" />
+        <provider android:name="jp.archilogic.docnext.android.provider.TextSearchProvider" android:authorities="jp.archilogic.docnext.android.provider.TextSearchProvider" />
+
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

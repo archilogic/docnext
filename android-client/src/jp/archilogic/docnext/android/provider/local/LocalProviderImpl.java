@@ -1,7 +1,9 @@
 package jp.archilogic.docnext.android.provider.local;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -10,7 +12,14 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.ShortBufferException;
+
+import jp.archilogic.docnext.android.drm.Encryption;
 import jp.archilogic.docnext.android.exception.NoMediaMountException;
 import jp.archilogic.docnext.android.info.BookmarkInfo;
 import jp.archilogic.docnext.android.info.DocInfo;
@@ -33,12 +42,30 @@ import org.apache.commons.io.IOUtils;
 import android.content.res.Resources;
 import android.graphics.RectF;
 import android.os.Environment;
+import android.util.Log;
 
 import com.google.common.collect.Lists;
 
 public class LocalProviderImpl implements LocalProvider {
     private final LocalPathManager _pathManager = new LocalPathManager();
 
+    @SuppressWarnings("rawtypes")
+    @Override
+    public Map[] annotation( final String localDir , final int page ) {
+        try {
+            Map[] map;
+
+            if (!(new File(_pathManager.getAnnotationPath(localDir, page)).exists())) {
+                return null;
+            }
+
+            map = getJsonInfo(_pathManager.getAnnotationPath(localDir, page), Map[].class);
+            return map;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
     private void checkMediaMount() throws NoMediaMountException {
         if ( !Environment.MEDIA_MOUNTED.equals( Environment.getExternalStorageState() ) ) {
             throw new NoMediaMountException();
@@ -61,7 +88,7 @@ public class LocalProviderImpl implements LocalProvider {
     public List< BookmarkInfo > getBookmarkInfo( final String localDir ) throws NoMediaMountException , JSONException {
         checkMediaMount();
 
-        final BookmarkInfo[] bookmarks = getJsonInfo( _pathManager.getBookmarkPath( localDir ) , BookmarkInfo[].class );
+        final BookmarkInfo[] bookmarks = getPlainJsonInfo( _pathManager.getBookmarkPath( localDir ) , BookmarkInfo[].class );
 
         if ( bookmarks == null ) {
             return Lists.newArrayList();
@@ -76,7 +103,7 @@ public class LocalProviderImpl implements LocalProvider {
 
     @Override
     public DownloadInfo getDownloadInfo() throws NoMediaMountException , JSONException {
-        return getJsonInfo( _pathManager.getDownloadInfoPath() , DownloadInfo.class );
+        return getPlainJsonInfo( _pathManager.getDownloadInfoPath() , DownloadInfo.class );
     }
 
     @Override
@@ -160,6 +187,50 @@ public class LocalProviderImpl implements LocalProvider {
 
         String json;
         try {
+            Cipher c = Encryption.getDecryptor();
+            InputStream input = new FileInputStream( f );
+            int length = 1024 * 8;
+            byte[] buffer = new byte[length];
+            byte[] decrypted = new byte[length];
+            int n = 0;
+            int total = 0;
+            while ( ( n =  input.read( buffer , 0 , length ) ) != -1 ) {
+                int out_num = c.doFinal( buffer , 0 , n , decrypted , total );
+                total += out_num;
+            }
+            json = new String(decrypted , 0, total , "UTF-8" );
+        } catch ( final IOException e ) {
+            throw new RuntimeException( e );
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+            throw new RuntimeException( e );
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+            throw new RuntimeException( e );
+        } catch (ShortBufferException e) {
+            e.printStackTrace();
+            throw new RuntimeException( e );
+        }
+
+        JSON.prototype = CustomJSON.class;
+
+        return JSON.decode( json , cls );
+    }
+
+    private < T > T getPlainJsonInfo( final String path , final Class< ? extends T > cls ) throws NoMediaMountException , JSONException {
+        checkMediaMount();
+
+        Log.d( "docnext" , path );
+        
+        final File f = new File( path );
+
+        if ( !f.exists() ) {
+            return null;
+        }
+
+        
+        String json;
+        try {
             json = FileUtils.readFileToString( f );
         } catch ( final IOException e ) {
             throw new RuntimeException( e );
@@ -169,7 +240,7 @@ public class LocalProviderImpl implements LocalProvider {
 
         return JSON.decode( json , cls );
     }
-
+    
     @Override
     public int getLastOpenedPage( final String localDir ) throws NoMediaMountException {
         checkMediaMount();

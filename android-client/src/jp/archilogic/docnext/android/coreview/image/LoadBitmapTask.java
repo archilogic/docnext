@@ -5,9 +5,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+
 import jp.archilogic.docnext.android.Kernel;
 import jp.archilogic.docnext.android.activity.CoreViewActivity;
 import jp.archilogic.docnext.android.coreview.image.CoreImageRenderer.TextureBinder;
+import jp.archilogic.docnext.android.drm.Encryption;
 import jp.archilogic.docnext.android.exception.NoMediaMountException;
 
 import org.apache.commons.io.FileUtils;
@@ -62,11 +67,13 @@ public class LoadBitmapTask implements Runnable {
             final String path = Kernel.getLocalProvider().getImageTexturePath( _localDir , page , level , _px , _py , false );
 
             final byte[] data = FileUtils.readFileToByteArray( new File( path ) );
+            Cipher cipher = Encryption.getDecryptor();
 
             final Options o = new Options();
             o.inPreferredConfig = Config.RGB_565;
 
-            final Bitmap ret = BitmapFactory.decodeByteArray( data , 0 , data.length , o );
+            final byte[] decrypted = cipher.doFinal( data );
+            final Bitmap ret = BitmapFactory.decodeByteArray( decrypted , 0 , decrypted.length , o );
 
             if ( ret == null ) {
                 // for skia decoder problem (This seems to occur on low I/O performance)
@@ -83,6 +90,12 @@ public class LoadBitmapTask implements Runnable {
             return null;
         } catch ( final IOException e ) {
             throw new RuntimeException( e );
+        } catch (IllegalBlockSizeException e) {
+            e.printStackTrace();
+            throw new RuntimeException( e );
+        } catch (BadPaddingException e) {
+            e.printStackTrace();
+            throw new RuntimeException( e );
         }
     }
 
@@ -92,7 +105,9 @@ public class LoadBitmapTask implements Runnable {
 
             final byte[] data = FileUtils.readFileToByteArray( new File( path ) );
 
-            return nativeLoad( data );
+            final Cipher cipher = Encryption.getDecryptor();
+            final byte[] decrypted = cipher.doFinal( data );
+            return nativeLoad( decrypted );
         } catch ( final NoMediaMountException e ) {
             e.printStackTrace();
             _context.sendBroadcast( new Intent( CoreViewActivity.BROADCAST_ERROR_NO_SD_CARD ) );
@@ -100,6 +115,10 @@ public class LoadBitmapTask implements Runnable {
             return 0;
         } catch ( final IOException e ) {
             throw new RuntimeException( e );
+        } catch (IllegalBlockSizeException e) {
+            throw new RuntimeException();
+        } catch (BadPaddingException e) {
+            throw new RuntimeException();
         }
     }
 

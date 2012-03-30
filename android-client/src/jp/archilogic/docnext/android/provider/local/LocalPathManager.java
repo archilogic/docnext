@@ -41,7 +41,11 @@ public class LocalPathManager {
     public void ensureRoot() {
         ensure( ROOT );
     }
-
+    
+    public String getAnnotationPath( final String localDir, final int page ) {
+        return String.format( "%s%d.annon.json" , localDir, page );
+    }
+    
     public String getBookmarkPath( final String localDir ) {
         return String.format( "%sbookmark.json" , localDir );
     }

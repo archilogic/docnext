@@ -8,6 +8,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketTimeoutException;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+
+import jp.archilogic.docnext.android.drm.Encryption;
 import jp.archilogic.docnext.android.provider.local.LocalPathManager;
 import jp.archilogic.docnext.android.util.NetUtil;
 
@@ -15,6 +20,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import android.content.Context;
+import android.util.Log;
 
 public class DownloadTask extends BaseDownloadTask {
     private final String _remotePath;
@@ -37,12 +43,12 @@ public class DownloadTask extends BaseDownloadTask {
 
         do {
             try {
-                InputStream in = null;
+                InputStream in = new BufferedInputStream( NetUtil.get().get( _remotePath ) , 8 * 1024 );
 
                 try {
-                    in = new BufferedInputStream( NetUtil.get().get( _remotePath ) , 8 * 1024 );
 
                     OutputStream out = null;
+                    Cipher c = Encryption.getEncryptor();
 
                     try {
                         out = new BufferedOutputStream( FileUtils.openOutputStream( workFile ) , 8 * 1024 );
@@ -54,8 +60,16 @@ public class DownloadTask extends BaseDownloadTask {
                                 return;
                             }
 
-                            out.write( buffer , 0 , n );
+                            final byte[] encrypted = c.update( buffer , 0 , n );
+                            if ( encrypted != null ) {
+                                out.write( encrypted , 0 , encrypted.length );
+                            }
                         }
+                        out.write( c.doFinal() );
+                    } catch (IllegalBlockSizeException e) {
+                        e.printStackTrace();
+                    } catch (BadPaddingException e) {
+                        e.printStackTrace();
                     } finally {
                         IOUtils.closeQuietly( out );
                     }
@@ -82,6 +96,7 @@ public class DownloadTask extends BaseDownloadTask {
             return;
         }
 
+        Log.d( "docnext" , _localPath );
         FileUtils.moveFile( workFile , new File( _localPath ) );
 
         new File( _localPath + DOWNLOADING_POSTFIX ).delete();
