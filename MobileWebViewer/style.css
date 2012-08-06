@@ -1,0 +1,75 @@
+body {
+    background: url('img/background.png');
+}
+
+#topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    z-index: 1000;
+    background-color: black;
+    opacity: 0.8;
+    display: none;
+    padding-bottom: 10px;
+    font-size: 16pt;
+}
+
+#topbar img {
+    /*
+    width:180px;
+    */
+}
+
+.debug {
+    position: fixed;
+    top: 0;
+    left: 0;
+    opacity: 0.9;
+    background-color: gray;
+    display: none;
+    font-size: 16pt;
+}
+
+ul.nav {
+    list-style-image: none;
+    list-style-position: outside;
+    list-style-type: none;
+    -webkit-padding-start: 0px;
+    text-align: center;
+}
+
+.nav > li {
+    float: left;
+    display: block;
+    width: 33%;
+}
+
+.nav > li a {
+    display: block;
+    padding: 0px;
+    color: white;
+    text-decoration: none;
+}
+
+#thumbnail_name {
+    /*
+    font-size: x-small;
+    */
+}
+
+.shelf {
+    background: url('../img/wood.png');
+}
+
+#shelf > li {
+    float: left;
+    width: 20%;
+    list-style-type: none;
+    text-align: center;
+}
+
+#shelf > li img {
+    height: 180px;
+    padding: 10px;
+}
